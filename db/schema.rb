@@ -10,7 +10,16 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_024113) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_11_022754) do
+  create_table "devices", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "device_type", limit: 20, null: false
+    t.string "name", limit: 100, null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["user_id", "name"], name: "index_devices_on_user_id_and_name", unique: true
+  end
+
   create_table "users", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "display_name", limit: 100, null: false
@@ -19,4 +28,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_024113) do
     t.string "username", limit: 50, null: false
     t.index ["username"], name: "index_users_on_username", unique: true
   end
+
+  add_foreign_key "devices", "users"
 end
