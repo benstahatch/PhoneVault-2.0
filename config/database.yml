@@ -12,9 +12,9 @@
 default: &default
   adapter: mysql2
   encoding: utf8mb4
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  username:  <%= ENV.fetch("MYSQL_USER") %>
-  password: <%= ENV.fetch("MYSQL_PASSWORD") %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  username:  <%= ENV.fetch("MYSQL_USER", "root") %>
+  password: <%= ENV["MYSQL_PASSWORD"] %>
   host: <%= ENV.fetch("DB_HOST") { "127.0.0.1" } %>
   port: <%= ENV.fetch("MYSQL_HOST_PORT") { 3308 } %>
 
@@ -28,7 +28,7 @@ development:
 # Do not set this db to the same as development or production.
 test:
   <<: *default
-  database: phone_vault_2_0_test
+  database: <%= ENV.fetch("MYSQL_DATABASE") { "phonevault2" } %>_test
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
