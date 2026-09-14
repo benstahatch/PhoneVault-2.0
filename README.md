@@ -308,11 +308,15 @@ The repository contains an `.env.example` file that shows the variables needed t
 ## Development Environment & Automation
 
 - [ ] Finalize the Docker development environment
+- [ ] Document required host/runtime dependencies
+- [ ] Track required system packages such as `libvips`
+- [ ] Track required Ruby gems and why they are needed
+- [ ] Move host/runtime dependencies into Docker where practical
 - [ ] Update `.env.example`
 - [ ] Verify secrets and local config are ignored by Git
 - [ ] Plan the automated setup process
 - [ ] Write and test initial setup scripts
-- [ ] Use Ruby, Pyth[118;1:3uon, or shell scripts where appropriate for automation
+- [ ] Use Ruby, Python, or shell scripts where appropriate for automation
 - [ ] Automate environment and Docker setup where practical
 - [ ] Test setup scripts from a fresh clone
 - [ ] Document anything that still requires manual setup

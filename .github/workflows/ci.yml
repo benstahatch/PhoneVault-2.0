@@ -36,6 +36,12 @@ jobs:
         with:
           bundler-cache: true
 
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvips
+
+
       - name: Scan for security vulnerabilities in JavaScript dependencies
         run: bin/importmap audit
 
