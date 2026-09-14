@@ -1,5 +1,6 @@
 class Device < ApplicationRecord
   belongs_to :user
+  has_many :backup_runs, dependent: :restrict_with_error
 
   enum :device_type, {
     phone: "phone",

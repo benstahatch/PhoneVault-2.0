@@ -1,7 +1,8 @@
 class User < ApplicationRecord
   has_secure_password
 
-  has_many :devices, dependent: :destroy
+  has_many :devices, dependent: :restrict_with_error
+  has_many :security_events, dependent: :nullify
 
   validates :username,
     presence: true,
