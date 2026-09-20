@@ -4,11 +4,10 @@ bin/rails runner '
 
 For example:
 
-bin/rails runner ' <--- 
+bin/rails runner ' <---
 require "digest"
 ...............
 =end
-
 require "digest"
 require "securerandom"
 
@@ -57,4 +56,3 @@ end
 
 puts
 puts "Test transaction rolled back successfully."
-
