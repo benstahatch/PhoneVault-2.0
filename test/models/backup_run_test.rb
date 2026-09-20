@@ -31,4 +31,24 @@ class BackupRunTest < ActiveSupport::TestCase
     assert_not run.valid?
     assert run.errors[:device].any?
   end
+
+  test "a backup run with files cannot be destroyed" do
+    run = BackupRun.create!(device: devices(:alice_phone), status: "completed")
+    BackupFile.create!(
+      backup_run: run,
+      original_filename: "photo.jpg",
+      storage_path: "/data/photo.jpg",
+      size_bytes: 1024,
+      sha256: "a" * 64
+    )
+    assert_not run.destroy
+    assert run.errors[:base].any?
+    assert BackupRun.exists?(run.id)
+  end
+
+  test "a backup run with no files can be destroyed" do
+    run = BackupRun.create!(device: devices(:alice_phone), status: "pending")
+    assert run.destroy
+    assert_not BackupRun.exists?(run.id)
+  end
 end
