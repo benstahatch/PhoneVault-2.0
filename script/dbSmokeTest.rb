@@ -1,13 +1,3 @@
-=begin
-run this by copy/pasting
-bin/rails runner '
-
-For example:
-
-bin/rails runner ' <---
-require "digest"
-...............
-=end
 require "digest"
 require "securerandom"
 
