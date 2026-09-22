@@ -34,7 +34,7 @@ The long term idea is to provide a simple way for anyone to run their own privat
 
 PhoneVault v0.1 should be able to:
 
-- run on a Linux machine.
+- [x]- run on a Linux machine.
 - use a local username and password.
 - register one or more personal devices.
 - upload and store files such as notes and pictures.
@@ -296,8 +296,7 @@ The repository contains an `.env.example` file that shows the variables needed t
 
 ## Database Design
 
-- [x] 
-- [ ] Finalize the database schema
+- [x] Finalize the database schema
 - [x] Identify primary keys and foreign keys
 - [ ] create the EER diagram
 - [ ] define integrity constraints
@@ -324,11 +323,11 @@ The repository contains an `.env.example` file that shows the variables needed t
 
 ## Rails Foundation
 
-- [ ] Create the Rails application
-- [ ] Connect Rails to MySQL
-- [ ] Replace temporary SQL setup with Rails migrations as needed
-- [ ] Create the initial Rails models
-- [ ] add model relationships
+- [x] Create the Rails application
+- [x] Connect Rails to MySQL
+- [x] Replace temporary SQL setup with Rails migrations as needed
+- [x] Create the initial Rails models
+- [x] add model relationships
 - [ ] verify Rails can read & write database records
 
 ## Authentication
@@ -387,9 +386,9 @@ The repository contains an `.env.example` file that shows the variables needed t
 - [ ] Document clean setup on Linux
 - [ ] test PhoneVault on a dedicated Linux server
 - [ ] test persistent storage after container restarts
-- [ ] add Tailscale setup for trusted remote access
+- [x] add Tailscale setup for trusted remote access
 - [ ] verify PhoneVault works through Tailscale
-- [ ] avoid exposing MySQL directly to public Internet
+- [x] avoid exposing MySQL directly to public Internet
 - [ ] Evaluate Raspberry Pi deployment
 
 
