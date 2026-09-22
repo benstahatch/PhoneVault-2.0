@@ -1,11 +1,17 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
-one:
-  user: one
-  name: MyString
-  device_type: MyString
+#changed the sample names to better test names
+alice_phone:
+  user: alice
+  name: Alice Pixel
+  device_type: phone
 
-two:
-  user: two
-  name: MyString
-  device_type: MyString
+alice_laptop:
+  user: alice
+  name: Alice ThinkPad
+  device_type: laptop
+
+bob_phone:
+  user: bob
+  name: Bob iPhone
+  device_type: phone

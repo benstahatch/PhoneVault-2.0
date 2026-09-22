@@ -1,11 +1,12 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+# Read about fixtures at https://api.rubyonrails.org/classes/ctiveRecord/FixtureSet.html
 
-one:
-  username: MyString
-  display_name: MyString
-  password_digest: MyString
+#These names are implemented for test purpose. the original using "mystring" for both halted the system
+alice:
+  username: alice
+  display_name: Alice Example
+  password_digest: <%= BCrypt::Password.create("secret123") %>
 
-two:
-  username: MyString
-  display_name: MyString
-  password_digest: MyString
+bob:
+  username: bob
+  display_name: Bob Example
+  password_digest: <%= BCrypt::Password.create("secret123") %>
