@@ -1,0 +1,7 @@
+<h1>PhoneVault Dashboard</h1>
+
+<p>Welcome, <%= @user.display_name %>.</p>
+<p>Username: <%= @user.username %></p>
+
+
+<%= button_to "Log out", logout_path, method: :delete %>

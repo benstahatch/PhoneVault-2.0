@@ -1,0 +1,60 @@
+<h1>Create a PhoneVault Account</h1>
+
+
+<% if @user.errors.any? %>
+  <div>
+    <h2><%= pluralize(@user.errors.count, "error") %> prevented this account from being created:</h2>
+
+    <ul>
+      <% @user.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<%= form_with model: @user, url: signup_path do |form| %>
+  <div>
+    <%= form.label :username %>
+    <%= form.text_field :username,
+          required: true,
+          autocomplete: "username" %>
+  </div>
+
+  <div>
+    <%= form.label :display_name %>
+    <%= form.text_field :display_name,
+          required: true %>
+  </div>
+
+  <div>
+    <%= form.label :password %>
+    <%= form.password_field :password,
+          required: true,
+          autocomplete: "new-password" %>
+  </div>
+
+  <div>
+    <%= form.label :password_confirmation %>
+    <%= form.password_field :password_confirmation,
+          required: true,
+          autocomplete: "new-password" %>
+  </div>
+
+  <div>
+    <%= form.submit "Create account" %>
+  </div>
+<% end %>
+
+
+
+  <div>
+    <%= form.submit "Create account" %>
+  </div>
+<% end %>
+
+<hr>
+
+<p>Already have a PhoneVault account?</p>
+
+<%= link_to "Sign in", login_path %>
