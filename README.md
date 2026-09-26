@@ -298,11 +298,11 @@ The repository contains an `.env.example` file that shows the variables needed t
 
 - [x] Finalize the database schema
 - [x] Identify primary keys and foreign keys
-- [ ] create the EER diagram
-- [ ] define integrity constraints
+- [x] create the EER diagram
+- [x] define integrity constraints
 - [ ] add realistic sample data
-- [ ] test the schema in MySQL
-- [ ] Document database design
+- [x] test the schema in MySQL
+- [x] Document database design
 
 ## Development Environment & Automation
 
@@ -312,13 +312,13 @@ The repository contains an `.env.example` file that shows the variables needed t
 - [ ] Track required Ruby gems and why they are needed
 - [ ] Move host/runtime dependencies into Docker where practical
 - [ ] Update `.env.example`
-- [ ] Verify secrets and local config are ignored by Git
+- [x] Verify secrets and local config are ignored by Git
 - [ ] Plan the automated setup process
 - [ ] Write and test initial setup scripts
 - [ ] Use Ruby, Python, or shell scripts where appropriate for automation
 - [ ] Automate environment and Docker setup where practical
 - [ ] Test setup scripts from a fresh clone
-- [ ] Document anything that still requires manual setup
+- [ ] Document anything that stilljjk requires manual setup
 - [ ] Test setup on a second Linux machine
 
 ## Rails Foundation
@@ -328,34 +328,56 @@ The repository contains an `.env.example` file that shows the variables needed t
 - [x] Replace temporary SQL setup with Rails migrations as needed
 - [x] Create the initial Rails models
 - [x] add model relationships
-- [ ] verify Rails can read & write database records
+- [x] verify Rails can read & write database records
 
 ## Authentication
 
-- [ ] add local user authentication
-- [ ] Store passwords as secure hashes
-- [ ] Add login and logout
+- [x] add local user authentication
+- [x] Store passwords as secure hashes
+- [x] Add login and logout
+- [x] Protect authenticated pages by default
 - [ ] Prevent users from accessing data they do not own
 - [ ] add login rate limiting
 - [ ] add security event logging
 - [ ] Research other useful security events to log
 
+## Vault / Data Isolation 
+- [ ] Design the `Vault` model
+- [ ] Design `VaultMembership`
+- [ ] Separate user identity from storage ownership
+- [ ] Create a default vault for new users
+- [ ] Allow users to create multiple isolated vaults
+- [ ] Scope devices, backups, and files to a vault
+- [ ] Add authorization checks between users and vaults
+- [ ] Design shared vault support for users
+
+## Linux Agent and Permissions
+- [ ] Research privileged full-system backup mode
+- [ ] Define approved default backup paths
+- [ ] Define excluded virtual and system paths
+- [ ] Design symbolic link handling
+- [ ] Design removable storage support
+- [ ] Decide where PhoneVault agent configuration should live
+- [ ] Decide where PhoneVault temporary/cache data should live
+- [ ] Design an allowlist-based backup source policy
+- [ ] Build the first Linux backup agent/script
 
 ## Device Management
-- [ ] add device registration
-- [ ] associate devices w/ users
-- [ ] display registered devices
-- [ ] allow devices to be renamed
+- [ ] Add device registration
+- [x] Associate devices w/ users at the model/database level
+- [ ] Revisit device ownership when the Vault layer is introduced
+- [ ] Display registered devices
+- [ ] Allow devices to be renamed
 
 
 ## Backup System
-- [ ] accept a file upload through the web UI
-- [ ] create a backup run record
-- [ ] add persistent file storage
-- [ ] store file metadata in MySQL
-- [ ] calculate SHA-256 hashes
-- [ ] associate uploaded files with backup runs
-- [ ] track successful and failed backups
+- [ ] Accept a file upload through the web UI
+- [x] Create and test backup run records
+- [ ] Add persistent file storage
+- [x] Store file metadata in MySQL
+- [x] Calculate SHA-256 hashes
+- [x] Associate uploaded files with backup runs
+- [ ] Track successful and failed backups
 
 
 ## Restore System
@@ -384,24 +406,24 @@ The repository contains an `.env.example` file that shows the variables needed t
 ## Linux Deployment and Remote Access
 
 - [ ] Document clean setup on Linux
-- [ ] test PhoneVault on a dedicated Linux server
+- [x] test PhoneVault on a dedicated Linux machine
 - [ ] test persistent storage after container restarts
 - [x] add Tailscale setup for trusted remote access
-- [ ] verify PhoneVault works through Tailscale
+- [x] verify PhoneVault works through Tailscale
 - [x] avoid exposing MySQL directly to public Internet
-- [ ] Evaluate Raspberry Pi deployment
+- [x] Evaluate Raspberry Pi deployment
 
 
 ## Documentation & Due Diligence
 
-- [ ] Keep the README synchronized with the actual state of the project
+- [x] Keep the README synchronized with the actual state of the project
 - [ ] document installation
 - [ ] document backup & restore
-- [ ] document the database
-- [ ] document security decisions
+- [x] document the database
+- [x] document security decisions
 - [ ] document troubleshooting
 - [ ] remove unused development files & scripts
-- [ ] verify no passwords or private data are committed
+- [x] verify no passwords or private data are committed
 
 ## Future Work
 
