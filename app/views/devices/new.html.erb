@@ -1,0 +1,33 @@
+<h1>Register a Device</h1>
+
+<% if @device.errors.any? %>
+  <div>
+    <h2><%= pluralize(@device.errors.count, "error") %> prevented this device from being registered:</h2>
+
+    <ul>
+      <% @device.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<%= form_with model: @device do |form| %>
+  <div>
+    <%= form.label :name %>
+    <%= form.text_field :name, required: true %>
+  </div>
+
+  <div>
+    <%= form.label :device_type %>
+    <%= form.select :device_type, Device.device_types.keys %>
+  </div>
+
+  <div>
+    <%= form.submit "Register device" %>
+  </div>
+<% end %>
+
+<hr>
+
+<%= link_to "Back to your devices", devices_path %>
