@@ -8,4 +8,16 @@ class BackupRun < ApplicationRecord
     completed: "completed",
     failed: "failed"
   }, validate: true
+
+  def start!
+    update!(status: :running, started_at: Time.current)
+  end
+
+  def complete!
+    update!(status: :completed, completed_at: Time.current)
+  end
+
+  def fail!
+    update!(status: :failed, completed_at: Time.current)
+  end
 end
