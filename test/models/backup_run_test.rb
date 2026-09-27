@@ -51,4 +51,26 @@ class BackupRunTest < ActiveSupport::TestCase
     assert run.destroy
     assert_not BackupRun.exists?(run.id)
   end
+
+  test "start! marks the run as running and records the start time" do
+    run = BackupRun.create!(device: devices(:alice_phone), status: "pending")
+    run.start!
+    assert run.reload.running?
+    assert_not_nil run.started_at
+    assert_nil run.completed_at
+  end
+
+  test "complete! marks the run as completed and records the finish time" do
+    run = BackupRun.create!(device: devices(:alice_phone), status: "running")
+    run.complete!
+    assert run.reload.completed?
+    assert_not_nil run.completed_at
+  end
+
+  test "fail! marks the run as failed and records the finish time" do
+    run = BackupRun.create!(device: devices(:alice_phone), status: "running")
+    run.fail!
+    assert run.reload.failed?
+    assert_not_nil run.completed_at
+  end
 end
