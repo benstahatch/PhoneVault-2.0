@@ -1,4 +1,12 @@
-<h1>Log in to PhoneVault</h1>
+<% if flash[:notice] %>
+  <p><%= flash[:notice] %></p>
+<% end %>
+
+<% if flash[:alert] %>
+  <p><%= flash[:alert] %></p>
+<% end %>
+
+<h1>Sign in to PhoneVault</h1>
 
 <%= form_with url: login_path, scope: :session do |form| %>
   <div>
@@ -17,6 +25,12 @@
   </div>
 
   <div>
-    <%= form.submit "Log in" %>
+    <%= form.submit "Sign in" %>
   </div>
 <% end %>
+
+<hr>
+
+<p>New to PhoneVault?</p>
+
+<%= button_to "Create your account", signup_path, method: :get %>

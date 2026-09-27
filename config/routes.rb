@@ -1,8 +1,10 @@
 Rails.application.routes.draw do
   get "login", to: "sessions#new", as: :login
+  get "dashboard", to: "dashboard#show", as: :dashboard
+  get "signup", to: "registrations#new", as: :signup
+  post "signup", to: "registrations#create"
   post "login", to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
-
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
@@ -15,5 +17,6 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   # Defines the root path route ("/")
+  root "sessions#new"
   # root "posts#index"
 end
