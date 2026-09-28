@@ -16,7 +16,8 @@ class BackupStorage
   CHUNK_SIZE = 1.megabyte
 
   def self.default_root
-    Rails.root.join("storage", "backups")
+    base = Rails.env.test? ? Rails.root.join("tmp", "storage") : Rails.root.join("storage")
+    base.join("backups")
   end
 
   attr_reader :root

@@ -1,0 +1,26 @@
+<h1>Back Up a File — <%= @device.name %></h1>
+
+<% if @backup_run&.errors&.any? %>
+  <div>
+    <ul>
+      <% @backup_run.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<%= form_with model: [@device, @backup_run] do |form| %>
+  <div>
+    <%= form.label :file %>
+    <%= form.file_field :file, required: true %>
+  </div>
+
+  <div>
+    <%= form.submit "Upload" %>
+  </div>
+<% end %>
+
+<hr>
+
+<%= link_to "Back to backups", device_backup_runs_path(@device) %>
