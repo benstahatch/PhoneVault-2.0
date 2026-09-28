@@ -1,0 +1,17 @@
+<% if flash[:notice] %>
+  <p><%= flash[:notice] %></p>
+<% end %>
+
+<h1>Your Devices</h1>
+
+<% if @devices.any? %>
+  <ul>
+    <% @devices.each do |device| %>
+      <li><%= device.name %> (<%= device.device_type %>)</li>
+    <% end %>
+  </ul>
+<% else %>
+  <p>You haven't registered any devices yet.</p>
+<% end %>
+
+<%= link_to "Register a device", new_device_path %>
