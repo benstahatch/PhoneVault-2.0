@@ -6,7 +6,9 @@ Rails.application.routes.draw do
   post "login", to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
 
-  resources :devices, only: %i[index new create]
+  resources :devices, only: %i[index new create] do
+    resources :backups, only: %i[new create]
+  end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
