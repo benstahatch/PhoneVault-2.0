@@ -10,15 +10,15 @@ class BackupRunsController < ApplicationController
   end
 
   def create
-    uploaded_file = params.expect(backup_run: [:file])[:file]
-
+    uploaded_file = params.expect(backup_run: [ :file ])[:file]
     if uploaded_file.blank?
       @backup_run = @device.backup_runs.new
       @backup_run.errors.add(:base, "Choose a file to upload")
       return render :new, status: :unprocessable_entity
     end
 
-    @backup_run = @device.backup_runs.create!(status: :running, started_at: Time.current)
+    @backup_run = @device.backup_runs.create!(status: :pending)
+    @backup_run.start!
 
     begin
       BackupStorage.new.store(uploaded_file, backup_run: @backup_run, original_filename: uploaded_file.original_filename)

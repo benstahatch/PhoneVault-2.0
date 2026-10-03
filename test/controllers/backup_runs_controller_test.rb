@@ -53,6 +53,42 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Choose a file to upload", response.body
   end
 
+
+  test "create marks the backup run failed when storage fails" do
+  sign_in_as users(:alice)
+
+  device = devices(:alice_phone)
+  file = fixture_file_upload("sample_backup.txt", "text/plain")
+
+  Dir.mktmpdir("phonevault_failed_storage") do |root|
+    blocked_path = File.join(root, "not_a_directory")
+    File.write(blocked_path, "block storage here")
+
+    previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+    ENV["PHONEVAULT_BACKUP_ROOT"] = blocked_path
+
+    begin
+      assert_difference("BackupRun.count", 1) do
+        assert_no_difference("BackupFile.count") do
+          post device_backup_runs_path(device),
+            params: { backup_run: { file: file } }
+        end
+      end
+
+      run = device.backup_runs.order(:created_at).last
+
+      assert run.failed?
+      assert_redirected_to device_backup_runs_path(device)
+    ensure
+      if previous_root
+        ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
+      else
+        ENV.delete("PHONEVAULT_BACKUP_ROOT")
+      end
+    end
+  end
+end
+
   private
 
   def sign_in_as(user, password: "secret123")
