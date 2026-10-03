@@ -103,4 +103,21 @@ class BackupStorageTest < ActiveSupport::TestCase
     assert_raises(BackupStorage::Error) { @storage.path_for(outside) }
     assert_raises(BackupStorage::Error) { @storage.path_for(absolute) }
   end
+
+  test "default_root uses PHONEVAULT_BACKUP_ROOT when configured" do
+    Dir.mktmpdir("phonevault_backup_root") do |root|
+      previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+      ENV["PHONEVAULT_BACKUP_ROOT"] = root
+
+      begin
+        assert_equal Pathname(root).expand_path, BackupStorage.default_root
+      ensure
+        if previous_root
+          ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
+        else
+          ENV.delete("PHONEVAULT_BACKUP_ROOT")
+        end
+      end
+    end
+  end
 end

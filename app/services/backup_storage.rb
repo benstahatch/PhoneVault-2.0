@@ -16,9 +16,19 @@ class BackupStorage
   CHUNK_SIZE = 1.megabyte
 
   def self.default_root
-    Rails.root.join("storage", "backups")
-  end
+  configured_root = ENV["PHONEVAULT_BACKUP_ROOT"]
 
+  return Pathname(configured_root).expand_path if configured_root.present?
+
+  base =
+    if Rails.env.test?
+      Rails.root.join("tmp", "storage")
+    else
+      Rails.root.join("storage")
+    end
+
+  base.join("backups")
+end
   attr_reader :root
 
   def initialize(root: self.class.default_root)
