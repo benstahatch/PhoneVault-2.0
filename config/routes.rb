@@ -8,7 +8,13 @@ Rails.application.routes.draw do
 
 
 resources :devices, only: %i[index new create] do
-  resources :backup_runs, only: %i[index new create]
+  resources :backup_runs, only: %i[index new create] do
+  resources :backup_files, only: [] do
+    member do
+      get :restore
+      end
+    end
+  end
 end
 
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
