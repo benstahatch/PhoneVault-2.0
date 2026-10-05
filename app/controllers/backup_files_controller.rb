@@ -6,16 +6,20 @@ class BackupFilesController < ApplicationController
   rescue_from BackupStorage::MissingFile, with: :missing_file
   rescue_from BackupStorage::CorruptedFile, with: :corrupted_file
 
-  def restore
-    # verify the file and return its safe path on disk
-    path = BackupStorage.new.restore(@backup_file)
+def restore
+  # verify the file and return its safe path on disk
+  path = BackupStorage.new.restore(@backup_file)
 
-    # send the verified file back using its original filename
-    send_file path.to_s,
-      filename: @backup_file.original_filename,
-      disposition: "attachment"
-  end
+  # sanitize the user-provided filename before sending it to the browser
+  safe_filename = ActiveStorage::Filename
+    .new(@backup_file.original_filename)
+    .sanitized
 
+  # send the verified file back using the sanitized filename
+  send_file path.to_s,
+    filename: safe_filename,
+    disposition: "attachment"
+end
   private
 
   def set_device
