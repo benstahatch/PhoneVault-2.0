@@ -1,0 +1,28 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "File Access",
+      "warning_code": 16,
+      "fingerprint": "eaf2b6a9cd9ab205ada0bf17c192db7779577d4a3fbf3394ade10b5149cd2ac5",
+      "check_name": "SendFile",
+      "message": "Parameter value used in file name",
+      "file": "app/controllers/backup_files_controller.rb",
+      "line": 19,
+      "link": "https://brakemanscanner.org/docs/warning_types/file_access/",
+      "code": "send_file(BackupStorage.new.restore(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.find(params[:id])).to_s, :filename => ActiveStorage::Filename.new(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.find(params[:id]).original_filename).sanitized, :disposition => \"attachment\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "BackupFilesController",
+        "method": "restore"
+      },
+      "user_input": "params[:id]",
+      "confidence": "Weak",
+      "cwe_id": [
+        22
+      ],
+      "note": "false positive: restore paths come from BackupStorage, which validates the internal run_id/UUID storage format, enforces lexical and realpath containment under the configured storage root, rejects symlink escapes, and verifies size and SHA-256 before send_file. Ownership is also scoped through current_user -> device -> backup_run -> backup_file. Covered by BackupStorage and controller tests."
+    }
+  ],
+  "brakeman_version": "8.1.0"
+}

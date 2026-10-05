@@ -1,19 +1,38 @@
-<% if flash[:notice] %><p><%= flash[:notice] %></p><% end %>
-<% if flash[:alert] %><p><%= flash[:alert] %></p><% end %>
+<%# show success messages %>
+<% if flash[:notice] %>
+  <p><%= flash[:notice] %></p>
+<% end %>
+
+<%# show error messages %>
+<% if flash[:alert] %>
+  <p><%= flash[:alert] %></p>
+<% end %>
 
 <h1><%= @device.name %> — Backups</h1>
 
+<%# show backup runs if this device has any %>
 <% if @backup_runs.any? %>
   <ul>
     <% @backup_runs.each do |run| %>
       <li>
+        <%# show the current backup status %>
         <%= run.status %> —
-        <% run.backup_files.each do |file| %><%= file.original_filename %><% end %>
+
+        <%# show each file stored in this backup run %>
+        <% run.backup_files.each do |file| %>
+          <%= file.original_filename %>
+
+          <%# restore this specific backup file %>
+          <%= link_to "Restore",
+            restore_device_backup_run_backup_file_path(@device, run, file) %>
+        <% end %>
       </li>
     <% end %>
   </ul>
 <% else %>
+  <%# show when this device has no backups yet %>
   <p>No backups yet.</p>
 <% end %>
 
+<%# open the form to upload another file %>
 <%= link_to "Upload a file", new_device_backup_run_path(@device) %>
