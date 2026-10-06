@@ -3,5 +3,6 @@
 <p>Welcome, <%= @user.display_name %>.</p>
 <p>Username: <%= @user.username %></p>
 
+<%= link_to "Your devices", devices_path %>
 
 <%= button_to "Log out", logout_path, method: :delete %>
