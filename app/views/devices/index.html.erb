@@ -7,7 +7,11 @@
 <% if @devices.any? %>
   <ul>
     <% @devices.each do |device| %>
-      <li><%= device.name %> (<%= device.device_type %>)</li>
+      <li>
+        <%= device.name %> (<%= device.device_type %>)
+        <%= link_to "Backups", device_backup_runs_path(device) %>
+        <%= link_to "Upload", new_device_backup_run_path(device) %>
+      </li>
     <% end %>
   </ul>
 <% else %>
@@ -15,3 +19,7 @@
 <% end %>
 
 <%= link_to "Register a device", new_device_path %>
+
+<hr>
+
+<%= link_to "Back to dashboard", dashboard_path %>
