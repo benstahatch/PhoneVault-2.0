@@ -10,6 +10,9 @@ def restore
   # verify the file and return its safe path on disk
   path = BackupStorage.new.restore(@backup_file)
 
+  # only reached when the file exists and its sha-256 matches
+  record_security_event("FILE_RESTORED", current_user)
+
   # sanitize the user-provided filename before sending it to the browser
   safe_filename = ActiveStorage::Filename
     .new(@backup_file.original_filename)
@@ -39,12 +42,14 @@ end
 
   def missing_file
     # return to backup history if the stored file no longer exists
+    record_security_event("RESTORE_FILE_MISSING", current_user)
     redirect_to device_backup_runs_path(@device),
       alert: "Backup file is missing from storage."
   end
 
   def corrupted_file
     # return to backup history if the stored file fails sha-256 verification
+    record_security_event("RESTORE_FILE_CORRUPTED", current_user)
     redirect_to device_backup_runs_path(@device),
       alert: "Backup file failed integrity verification."
   end

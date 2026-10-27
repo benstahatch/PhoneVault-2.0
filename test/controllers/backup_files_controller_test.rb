@@ -67,6 +67,10 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
         # make sure rails sends it as a download
         assert_includes response.headers["Content-Disposition"], "attachment"
         assert_includes response.headers["Content-Disposition"], "sample_backup.txt"
+
+        event = SecurityEvent.order(:id).last
+        assert_equal "FILE_RESTORED", event.event_type
+        assert_equal users(:alice), event.user
       ensure
         if previous_root
           ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
@@ -111,6 +115,10 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
         # return to backup history with an alert
         assert_redirected_to device_backup_runs_path(device)
         assert_equal "Backup file is missing from storage.", flash[:alert]
+
+        event = SecurityEvent.order(:id).last
+        assert_equal "RESTORE_FILE_MISSING", event.event_type
+        assert_equal users(:alice), event.user
       ensure
         if previous_root
           ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
@@ -158,6 +166,10 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
         # return to backup history with an integrity warning
         assert_redirected_to device_backup_runs_path(device)
         assert_equal "Backup file failed integrity verification.", flash[:alert]
+
+        event = SecurityEvent.order(:id).last
+        assert_equal "RESTORE_FILE_CORRUPTED", event.event_type
+        assert_equal users(:alice), event.user
       ensure
         if previous_root
           ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
