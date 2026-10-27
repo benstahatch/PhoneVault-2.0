@@ -1,6 +1,10 @@
 class SessionsController < ApplicationController
   skip_before_action :require_login, only: %i[new create]
 
+  # allow 10 login attempts per IP address every 3 minutes to slow down password guessing
+  rate_limit to: 10, within: 3.minutes, only: :create,
+    with: -> { redirect_to login_path, alert: "Too many login attempts. Try again in a few minutes." }
+
   def new
   end
 
