@@ -13,3 +13,11 @@ module ActiveSupport
     # Add more helper methods to be used by all tests here...
   end
 end
+
+module ActionDispatch
+  class IntegrationTest
+    # start every request test with an empty cache so login rate limit counts
+    # from one test can't block logins in the next
+    setup { Rails.cache.clear }
+  end
+end
