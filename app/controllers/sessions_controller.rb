@@ -49,12 +49,4 @@ class SessionsController < ApplicationController
   def targeted_user
     User.find_by(username: params.dig(:session, :username))
   end
-
-  def record_security_event(event_type, user)
-    SecurityEvent.create!(
-      event_type: event_type,
-      user: user,
-      ip_address: request.remote_ip
-    )
-  end
 end
