@@ -8,3 +8,18 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+/* Basic PhoneVault page styling */
+/* Basic PhoneVault page styling */
+body {
+  margin: 0;
+  background-color: #f4f7fb;
+  color: #1f2937;
+  font-family: Arial, sans-serif;
+}
+
+/* Shared content container */
+.page-container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
