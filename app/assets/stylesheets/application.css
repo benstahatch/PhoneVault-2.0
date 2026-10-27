@@ -10,16 +10,153 @@
  */
 /* Basic PhoneVault page styling */
 /* Basic PhoneVault page styling */
-body {
-  margin: 0;
-  background-color: #f4f7fb;
-  color: #1f2937;
-  font-family: Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+
+/*Design Tokens*/
+:root {
+  --pv-primary: #b94e00;
+  --pv-primary-hover: #913d00;
+  --pv-text: #1f2937;
+  --pv-border: #d6dce4;
+  --pv-radius: 10px;
 }
 
+body {
+  margin: 0;
+  background-color: #f2fafa;
+  color: #1f2937;
+  font-family: 'Inter', system-ui, sans-serif;
 /* Shared content container */
 .page-container {
   max-width: 1100px;
   margin: 40px auto;
   padding: 0 20px;
+}
+
+/*dashboard title */
+.dashboard-title {
+  font-size: 42px;
+  color: #00000;
+  letter-spacing: -1px;
+  margin-bottom: 32px;
+}
+
+
+/*Dashboard welcome card*/
+.dashboard-card {
+  background-color: white;
+  padding: 24px;
+  border: 1px solid #dce8e8;
+  border-radius: 12px;
+}
+
+/* Shared navigation header */
+.site-header {
+  background-color: white;
+  border-bottom: 1px solid #dce8e8;
+}
+
+
+.site-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 20px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.site-logo {
+  color: #e66b00;
+  font-size: 24px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+
+.site-nav a {
+  color: #1f2937;
+  text-decoration: none;
+}
+
+.site-nav a:hover {
+  color: #e66b00;
+}
+
+
+/* All PhoneVault buttons */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 48px;
+  padding: 0 18px;
+  box-sizing: border-box;
+
+  border: 1px solid transparent;
+  border-radius: var(--pv-radius);
+
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+
+  cursor: pointer;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+/* Important actions */
+.button-primary {
+  background-color: var(--pv-primary);
+  color: white;
+  border-color: var(--pv-primary);
+}
+
+.button-primary:hover {
+  background-color: var(--pv-primary-hover);
+  border-color: var(--pv-primary-hover);
+}
+
+/* Secondary actions */
+.button-secondary {
+  background-color: white;
+  color: var(--pv-text);
+  border-color: var(--pv-border);
+}
+
+.button-secondary:hover {
+  background-color: #f3f6f8;
+}
+
+/* Visible keyboard focus */
+.button:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 3px;
+}
+
+/* Disabled buttons */
+.button:disabled,
+.button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
 }

@@ -1,0 +1,14 @@
+<header class="site-header">
+  <div class="site-header-inner">
+    <%= link_to "PhoneVault", dashboard_path, class: "site-logo" %>
+
+    <nav class="site-nav" aria-label="Main navigation">
+      <%= link_to "Dashboard", dashboard_path %>
+      <%= link_to "Devices", devices_path %>
+      <%= button_to "Log out", logout_path,
+        method: :delete,
+        class: "button button-secondary" %>
+    </nav>
+  </div>
+</header>
+

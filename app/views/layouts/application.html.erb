@@ -24,6 +24,9 @@
   </head>
 
   <body>
+    <% if current_user %>
+      <%= render "shared/header" %>
+    <% end %>
     <main class="page-container">
     <%= yield %>
     </main>
