@@ -19,7 +19,7 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     device = devices(:alice_phone)
     file = fixture_file_upload("sample_backup.txt", "text/plain")
 
-    assert_difference [ "BackupRun.count", "BackupFile.count" ], 1 do
+    assert_difference [ "BackupRun.count", "BackupFile.count", "SecurityEvent.count" ], 1 do
       post device_backup_runs_path(device), params: { backup_run: { file: file } }
     end
 
@@ -28,6 +28,33 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "sample_backup.txt", run.backup_files.last.original_filename
     assert_equal Digest::SHA256.file(file_fixture("sample_backup.txt")).hexdigest, run.backup_files.last.sha256
     assert_redirected_to device_backup_runs_path(device)
+
+    event = SecurityEvent.order(:id).last
+    assert_equal "BACKUP_SUCCESS", event.event_type
+    assert_equal users(:alice), event.user
+  end
+
+  test "a failure to record BACKUP_SUCCESS does not mark a stored backup failed" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    file = fixture_file_upload("sample_backup.txt", "text/plain")
+
+    # temporarily make every security event save fail, like a database hiccup would
+    SecurityEvent.define_singleton_method(:create!) do |*|
+      raise ActiveRecord::ActiveRecordError, "simulated database failure"
+    end
+
+    begin
+      assert_raises(ActiveRecord::ActiveRecordError) do
+        post device_backup_runs_path(device), params: { backup_run: { file: file } }
+      end
+    ensure
+      # put the real create! back so other tests aren't affected
+      SecurityEvent.singleton_class.remove_method(:create!)
+    end
+
+    run = device.backup_runs.order(:created_at).last
+    assert run.completed?
   end
 
   test "create cannot be used against another user's device" do
@@ -45,7 +72,7 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:alice)
     device = devices(:alice_phone)
 
-    assert_no_difference [ "BackupRun.count", "BackupFile.count" ] do
+    assert_no_difference [ "BackupRun.count", "BackupFile.count", "SecurityEvent.count" ] do
       post device_backup_runs_path(device), params: { backup_run: { file: "" } }
     end
 
@@ -68,7 +95,7 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     ENV["PHONEVAULT_BACKUP_ROOT"] = blocked_path
 
     begin
-      assert_difference("BackupRun.count", 1) do
+      assert_difference([ "BackupRun.count", "SecurityEvent.count" ], 1) do
         assert_no_difference("BackupFile.count") do
           post device_backup_runs_path(device),
             params: { backup_run: { file: file } }
@@ -79,6 +106,10 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
 
       assert run.failed?
       assert_redirected_to device_backup_runs_path(device)
+
+      event = SecurityEvent.order(:id).last
+      assert_equal "BACKUP_FAILED", event.event_type
+      assert_equal users(:alice), event.user
     ensure
       if previous_root
         ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root

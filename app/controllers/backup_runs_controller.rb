@@ -23,11 +23,16 @@ class BackupRunsController < ApplicationController
     begin
       BackupStorage.new.store(uploaded_file, backup_run: @backup_run, original_filename: uploaded_file.original_filename)
       @backup_run.complete!
-      redirect_to device_backup_runs_path(@device), notice: "Backup completed."
     rescue StandardError
+      # mark the run failed before logging, so the status is saved even if logging fails
       @backup_run.fail!
-      redirect_to device_backup_runs_path(@device), alert: "Backup failed to store the file."
+      record_security_event("BACKUP_FAILED", current_user)
+      return redirect_to device_backup_runs_path(@device), alert: "Backup failed to store the file."
     end
+
+    # recorded outside begin/rescue so a logging error can't mark a stored backup as failed
+    record_security_event("BACKUP_SUCCESS", current_user)
+    redirect_to device_backup_runs_path(@device), notice: "Backup completed."
   end
 
   private

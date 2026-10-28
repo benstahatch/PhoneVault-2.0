@@ -198,19 +198,26 @@ Current schema fields:
 - `ip_address`
 - `created_at`
 
-The model exists, but automatic event logging is still incomplete.
+Events are recorded automatically with the user (when known) and the request's IP address:
 
-Possible event types include:
+| Event | Recorded when |
+| --- | --- |
+| `LOGIN_SUCCESS` | A user logs in. |
+| `LOGIN_FAILED` | A login fails. Linked to the targeted account when the username exists, otherwise saved with no user. |
+| `LOGIN_RATE_LIMITED` | A login attempt is blocked by the rate limit (10 attempts per IP address every 3 minutes). |
+| `LOGOUT` | A user logs out. |
+| `DEVICE_REGISTERED` | A device is saved successfully. |
+| `BACKUP_SUCCESS` | An uploaded file is stored and its backup run is marked completed. |
+| `BACKUP_FAILED` | Storing an uploaded file fails and its backup run is marked failed. |
+| `FILE_RESTORED` | A file passes its size and SHA-256 checks and is sent for download. |
+| `RESTORE_FILE_MISSING` | A restore is requested but the file is missing from storage. |
+| `RESTORE_FILE_CORRUPTED` | A restore is requested but the file fails SHA-256 verification. |
 
-- `LOGIN_SUCCESS`
-- `LOGIN_FAILED`
-- `LOGOUT`
-- `BACKUP_SUCCESS`
-- `BACKUP_FAILED`
-- `FILE_RESTORED`
-- `AUTHORIZATION_DENIED`
-- `DEVICE_REGISTERED`
-- `RESTORE_FAILED`
+Not recorded yet:
+
+- `AUTHORIZATION_DENIED`: requests for another user's records already return 404, but are not logged. Rails cannot tell those apart from IDs that simply don't exist without an extra lookup.
+
+Current limitation: events record what happened, who, and from where, but not which device, backup run, or file was involved.
 
 ---
 
@@ -1071,8 +1078,10 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Prevent partial/final backup file collisions from overwriting existing data.
 - [x] Create private backup files.
 - [x] Run Brakeman security scanning in CI.
-- [ ] Add login rate limiting.
-- [ ] Add automatic security-event logging.
+- [x] Add login rate limiting.
+- [x] Add automatic security-event logging.
+- [ ] Decide whether to log `AUTHORIZATION_DENIED` for requests to records the user does not own.
+- [ ] Record which device, backup run, or file a security event is about.
 - [ ] Research 2FA.
 - [ ] Research recovery codes.
 - [ ] Research device API tokens.

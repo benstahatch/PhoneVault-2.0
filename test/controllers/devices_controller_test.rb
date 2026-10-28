@@ -29,6 +29,28 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to devices_path
   end
 
+  test "create records DEVICE_REGISTERED for the current user" do
+    sign_in_as users(:alice)
+
+    assert_difference("SecurityEvent.count", 1) do
+      post devices_path, params: { device: { name: "Alice Tablet", device_type: "tablet" } }
+    end
+
+    event = SecurityEvent.order(:id).last
+    assert_equal "DEVICE_REGISTERED", event.event_type
+    assert_equal users(:alice), event.user
+  end
+
+  test "create records no event when the device is invalid" do
+    sign_in_as users(:alice)
+
+    assert_no_difference("SecurityEvent.count") do
+      post devices_path, params: { device: { name: "", device_type: "tablet" } }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "create ignores an attempt to assign the device to another user" do
     sign_in_as users(:alice)
 

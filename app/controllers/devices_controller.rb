@@ -12,6 +12,7 @@ class DevicesController < ApplicationController
     @device = current_user.devices.new(device_params)
 
     if @device.save
+      record_security_event("DEVICE_REGISTERED", current_user)
       redirect_to devices_path, notice: "Device registered successfully."
     else
       render :new, status: :unprocessable_entity
