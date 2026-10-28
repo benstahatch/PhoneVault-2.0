@@ -38,7 +38,7 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-gem "image_processing", "~> 2.1"
+gem "image_processing", "~> 2.2"
 
 # Provides Ruby bindings for libvips, allowing image_processing to resize and transform uploaded images
 gem "ruby-vips", "~> 2.0"
