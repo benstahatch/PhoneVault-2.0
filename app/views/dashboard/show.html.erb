@@ -1,8 +1,11 @@
-<h1>PhoneVault Dashboard</h1>
+<h1 class = "dashboard-title">Dashboard</h1>
 
-<p>Welcome, <%= @user.display_name %>.</p>
-<p>Username: <%= @user.username %></p>
+<div class="dashboard-card">
 
-<%= link_to "Your devices", devices_path %>
+  <h2>Welcome back, <%= @user.display_name %>.</h2>
 
-<%= button_to "Log out", logout_path, method: :delete %>
+
+  <p>Username: <%= @user.username %></p>
+
+  <%= link_to "Your devices", devices_path, class: "button button-primary" %>
+</div>
