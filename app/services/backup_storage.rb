@@ -12,8 +12,10 @@ class BackupStorage
   class Error < StandardError; end
   class MissingFile < Error; end
   class CorruptedFile < Error; end
+  class TooLarge < Error; end
 
   CHUNK_SIZE = 1.megabyte
+  DEFAULT_MAX_BYTES = 10.gigabytes
 
   # valid UUID format used for generated storage filenames
   UUID_PATTERN =
@@ -34,10 +36,11 @@ class BackupStorage
     base.join("backups")
   end
 
-  attr_reader :root
+  attr_reader :root, :max_bytes
 
-  def initialize(root: self.class.default_root, uuid_generator: SecureRandom.method(:uuid))
+  def initialize(root: self.class.default_root, max_bytes: DEFAULT_MAX_BYTES, uuid_generator: SecureRandom.method(:uuid))
     @root = Pathname(root).expand_path
+    @max_bytes = max_bytes
     @uuid_generator = uuid_generator
   end
 
