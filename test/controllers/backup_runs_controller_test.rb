@@ -120,6 +120,34 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
   end
 end
 
+  test "create rejects a file over the upload limit and records BACKUP_FAILED" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+
+    # 1 MB is the smallest limit the setting allows, so upload one byte more
+    file = Rack::Test::UploadedFile.new(
+      StringIO.new("a" * (1.megabyte + 1)), "text/plain", original_filename: "too_big.txt"
+    )
+
+    previous_limit = ENV["PHONEVAULT_MAX_UPLOAD_MB"]
+    ENV["PHONEVAULT_MAX_UPLOAD_MB"] = "1"
+
+    begin
+      assert_difference([ "BackupRun.count", "SecurityEvent.count" ], 1) do
+        assert_no_difference("BackupFile.count") do
+          post device_backup_runs_path(device), params: { backup_run: { file: file } }
+        end
+      end
+    ensure
+      ENV["PHONEVAULT_MAX_UPLOAD_MB"] = previous_limit
+    end
+
+    assert device.backup_runs.order(:created_at).last.failed?
+    assert_redirected_to device_backup_runs_path(device)
+    assert_equal "File is larger than the 1 MB upload limit.", flash[:alert]
+    assert_equal "BACKUP_FAILED", SecurityEvent.order(:id).last.event_type
+  end
+
   private
 
   def sign_in_as(user, password: "secret123")
