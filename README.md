@@ -208,7 +208,7 @@ Events are recorded automatically with the user (when known) and the request's I
 | `LOGOUT` | A user logs out. |
 | `DEVICE_REGISTERED` | A device is saved successfully. |
 | `BACKUP_SUCCESS` | An uploaded file is stored and its backup run is marked completed. |
-| `BACKUP_FAILED` | Storing an uploaded file fails and its backup run is marked failed. |
+| `BACKUP_FAILED` | Storing an uploaded file fails (including uploads over the size limit) and its backup run is marked failed. |
 | `FILE_RESTORED` | A file passes its size and SHA-256 checks and is sent for download. |
 | `RESTORE_FILE_MISSING` | A restore is requested but the file is missing from storage. |
 | `RESTORE_FILE_CORRUPTED` | A restore is requested but the file fails SHA-256 verification. |
@@ -276,6 +276,8 @@ Stream file to storage
       |
       +--> count size in bytes
       |
+      +--> stop and delete the partial file if over the upload size limit
+      |
       v
 Save metadata in MySQL
       |
@@ -284,6 +286,16 @@ Mark Backup Complete
 ```
 
 PhoneVault does not use the uploaded filename as the real filesystem path. The original filename is stored as metadata while the file on disk uses a generated UUID.
+
+## Upload size limit
+
+PhoneVault refuses to store uploads larger than `PHONEVAULT_MAX_UPLOAD_MB` megabytes (10 GB when unset). The value must be a positive whole number; anything else makes uploads fail instead of silently allowing any size.
+
+```text
+PHONEVAULT_MAX_UPLOAD_MB=2048
+```
+
+The limit protects the backup disk, but Rails has already received the whole upload into a temporary file before PhoneVault checks it. Stopping oversized requests earlier needs a web server or reverse proxy limit.
 
 ---
 
@@ -444,6 +456,7 @@ Edit `.env` and configure the database values.
 | `MYSQL_HOST_PORT`        | `3308`                    | Host port mapped to MySQL container port `3306`   |
 | `DB_HOST`                | `127.0.0.1` when used     | Database host for Rails                           |
 | `PHONEVAULT_BACKUP_ROOT` | Optional                  | Absolute path where backup bytes should be stored |
+| `PHONEVAULT_MAX_UPLOAD_MB` | Optional, `10240` (10 GB) | Largest upload PhoneVault will store, in MB     |
 
 Keep `.env` private. Do not commit real passwords or credentials.
 
@@ -1016,6 +1029,7 @@ fix the README too
 | `MYSQL_HOST_PORT`        | `3308`                        | Host port mapped to container port `3306` |
 | `DB_HOST`                | `127.0.0.1` when used         | Rails database host                       |
 | `PHONEVAULT_BACKUP_ROOT` | `storage/backups/` when unset | Optional absolute path for backup storage |
+| `PHONEVAULT_MAX_UPLOAD_MB` | `10240` (10 GB) when unset  | Optional upload size limit in whole megabytes |
 
 ---
 
@@ -1080,6 +1094,8 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Run Brakeman security scanning in CI.
 - [x] Add login rate limiting.
 - [x] Add automatic security-event logging.
+- [x] Limit the size of stored uploads with `PHONEVAULT_MAX_UPLOAD_MB`.
+- [ ] Reject oversized upload requests before Rails receives the whole body.
 - [ ] Decide whether to log `AUTHORIZATION_DENIED` for requests to records the user does not own.
 - [ ] Record which device, backup run, or file a security event is about.
 - [ ] Research 2FA.
