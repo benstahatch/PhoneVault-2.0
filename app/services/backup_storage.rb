@@ -36,9 +36,25 @@ class BackupStorage
     base.join("backups")
   end
 
+  # PHONEVAULT_MAX_UPLOAD_MB sets the limit in megabytes; a bad value fails
+  # loudly instead of quietly allowing uploads of any size
+  def self.default_max_bytes
+    configured_mb = ENV["PHONEVAULT_MAX_UPLOAD_MB"]
+
+    return DEFAULT_MAX_BYTES if configured_mb.blank?
+
+    megabytes = Integer(configured_mb, exception: false)
+
+    unless megabytes&.positive?
+      raise Error, "PHONEVAULT_MAX_UPLOAD_MB must be a positive whole number of megabytes"
+    end
+
+    megabytes.megabytes
+  end
+
   attr_reader :root, :max_bytes
 
-  def initialize(root: self.class.default_root, max_bytes: DEFAULT_MAX_BYTES, uuid_generator: SecureRandom.method(:uuid))
+  def initialize(root: self.class.default_root, max_bytes: self.class.default_max_bytes, uuid_generator: SecureRandom.method(:uuid))
     @root = Pathname(root).expand_path
     @max_bytes = max_bytes
     @uuid_generator = uuid_generator

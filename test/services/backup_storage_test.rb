@@ -299,4 +299,37 @@ end
       end
     end
   end
+
+  test "default_max_bytes is 10 GB when PHONEVAULT_MAX_UPLOAD_MB is not set" do
+    with_max_upload_mb(nil) do
+      assert_equal 10.gigabytes, BackupStorage.default_max_bytes
+    end
+  end
+
+  test "default_max_bytes uses PHONEVAULT_MAX_UPLOAD_MB when configured" do
+    with_max_upload_mb("500") do
+      assert_equal 500.megabytes, BackupStorage.default_max_bytes
+    end
+  end
+
+  test "default_max_bytes rejects a PHONEVAULT_MAX_UPLOAD_MB that isn't a positive whole number" do
+    [ "abc", "0", "-5", "1.5" ].each do |value|
+      with_max_upload_mb(value) do
+        assert_raises(BackupStorage::Error, "expected #{value.inspect} to be rejected") do
+          BackupStorage.default_max_bytes
+        end
+      end
+    end
+  end
+
+  private
+
+  # sets PHONEVAULT_MAX_UPLOAD_MB for the block, then restores the previous value
+  def with_max_upload_mb(value)
+    previous = ENV["PHONEVAULT_MAX_UPLOAD_MB"]
+    ENV["PHONEVAULT_MAX_UPLOAD_MB"] = value
+    yield
+  ensure
+    ENV["PHONEVAULT_MAX_UPLOAD_MB"] = previous
+  end
 end
