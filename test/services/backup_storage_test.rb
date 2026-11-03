@@ -47,6 +47,37 @@ class BackupStorageTest < ActiveSupport::TestCase
     assert_equal data.bytesize, file.size_bytes
   end
 
+  test "store accepts a file exactly at the size limit" do
+    storage = BackupStorage.new(root: @root, max_bytes: 11)
+    file = storage.store(StringIO.new("hello world"), backup_run: @run, original_filename: "note.txt")
+
+    assert_equal 11, file.size_bytes
+  end
+
+  test "store rejects a file over the size limit and leaves nothing behind" do
+    storage = BackupStorage.new(root: @root, max_bytes: 10)
+
+    assert_raises(BackupStorage::TooLarge) do
+      storage.store(StringIO.new("hello world"), backup_run: @run, original_filename: "note.txt")
+    end
+
+    assert_equal 0, @run.backup_files.count
+    assert_empty Dir.glob(File.join(@root, "**", "*")).select { |path| File.file?(path) }
+  end
+
+  test "store removes the partial file when a later chunk goes over the size limit" do
+    # the first chunk fits and is written, the second one pushes it over
+    storage = BackupStorage.new(root: @root, max_bytes: BackupStorage::CHUNK_SIZE + 10)
+    data = Random.bytes(BackupStorage::CHUNK_SIZE + 123)
+
+    assert_raises(BackupStorage::TooLarge) do
+      storage.store(StringIO.new(data), backup_run: @run, original_filename: "photo.jpg")
+    end
+
+    assert_equal 0, @run.backup_files.count
+    assert_empty Dir.glob(File.join(@root, "**", "*")).select { |path| File.file?(path) }
+  end
+
   test "store removes the written file when the record can't be saved" do
     assert_raises(ActiveRecord::RecordInvalid) do
       @storage.store(

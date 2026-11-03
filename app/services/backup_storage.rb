@@ -89,8 +89,14 @@ class BackupStorage
       temp_created = true
 
       while (chunk = io.read(CHUNK_SIZE))
-        digest << chunk
         size += chunk.bytesize
+
+        # stop before writing the chunk that goes over the limit
+        if size > max_bytes
+          raise TooLarge, "upload is larger than the #{max_bytes} byte limit"
+        end
+
+        digest << chunk
         file.write(chunk)
       end
 
