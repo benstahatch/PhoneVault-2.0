@@ -18,6 +18,7 @@ class RegistrationsController < ApplicationController
     if @user.save
       reset_session
       session[:user_id] = @user.id
+      record_security_event("ACCOUNT_CREATED", @user)
 
       redirect_to dashboard_path, notice: "Account created successfully."
     else

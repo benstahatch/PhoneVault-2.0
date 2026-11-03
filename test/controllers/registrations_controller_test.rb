@@ -23,6 +23,17 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "successful signup records ACCOUNT_CREATED for the new user" do
+    assert_difference("SecurityEvent.count", 1) do
+      sign_up
+    end
+
+    event = SecurityEvent.order(:id).last
+    assert_equal "ACCOUNT_CREATED", event.event_type
+    assert_equal User.find_by!(username: "newuser"), event.user
+    assert_equal "127.0.0.1", event.ip_address
+  end
+
   test "signup saves the username lowercase without surrounding spaces" do
     sign_up username: "  NewUser  "
 
@@ -38,7 +49,8 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "signup rejects a username that is already taken, ignoring case" do
-    assert_no_difference("User.count") do
+    # a rejected signup creates no account, so there's no ACCOUNT_CREATED event either
+    assert_no_difference([ "User.count", "SecurityEvent.count" ]) do
       sign_up username: "ALICE"
     end
 

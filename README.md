@@ -206,6 +206,7 @@ Events are recorded automatically with the user (when known) and the request's I
 | `LOGIN_FAILED` | A login fails. Linked to the targeted account when the username exists, otherwise saved with no user. |
 | `LOGIN_RATE_LIMITED` | A login attempt is blocked by the rate limit (10 attempts per IP address every 3 minutes). |
 | `LOGOUT` | A user logs out. |
+| `ACCOUNT_CREATED` | A new account is created through signup. |
 | `DEVICE_REGISTERED` | A device is saved successfully. |
 | `BACKUP_SUCCESS` | An uploaded file is stored and its backup run is marked completed. |
 | `BACKUP_FAILED` | Storing an uploaded file fails and its backup run is marked failed. |
