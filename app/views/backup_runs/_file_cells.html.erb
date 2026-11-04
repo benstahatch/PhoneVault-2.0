@@ -1,0 +1,14 @@
+<td class="backup-file-details">
+  <strong><%= file.original_filename %></strong>
+  <details>
+    <summary>SHA-256 details</summary>
+    <p>Recorded when uploaded; file size and hash are checked again when restored.</p>
+    <code><%= file.sha256 %></code>
+  </details>
+</td>
+<td><%= number_to_human_size(file.size_bytes) %></td>
+<td>
+  <%= link_to "Restore", restore_device_backup_run_backup_file_path(@device, run, file),
+    class: "button button-secondary", data: { turbo: false },
+    aria: { label: "Restore #{file.original_filename}" } %>
+</td>

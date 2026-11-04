@@ -1,42 +1,57 @@
-<%# show success messages %>
 <% if flash[:notice] %>
-  <p><%= flash[:notice] %></p>
+  <p role="status"><%= flash[:notice] %></p>
 <% end %>
-
-<%# show error messages %>
 <% if flash[:alert] %>
-  <p><%= flash[:alert] %></p>
+  <p role="alert"><%= flash[:alert] %></p>
 <% end %>
 
 <h1><%= @device.name %> — Backups</h1>
+<p><%= link_to "Upload a file", new_device_backup_run_path(@device), class: "button button-primary" %></p>
 
-<%# show backup runs if this device has any %>
 <% if @backup_runs.any? %>
-  <ul>
-    <% @backup_runs.each do |run| %>
-      <li>
-        <%# show the current backup status %>
-        <%= run.status %> —
-
-        <%# show each file stored in this backup run %>
-        <% run.backup_files.each do |file| %>
-          <%= file.original_filename %>
-
-          <%# restore this specific backup file %>
-          <%= link_to "Restore",
-            restore_device_backup_run_backup_file_path(@device, run, file) %>
+  <div class="backup-history-scroll" role="region" aria-label="Backup history" tabindex="0">
+    <table class="backup-history">
+      <caption>Backup history, newest first. Times shown in <%= Time.zone.name %>.</caption>
+      <thead>
+        <tr>
+          <th scope="col">Backup dates</th>
+          <th scope="col">Status</th>
+          <th scope="col">File</th>
+          <th scope="col">Size</th>
+          <th scope="col">Restore</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @backup_runs.each do |run| %>
+          <% files = run.backup_files.to_a %>
+          <tr>
+            <td rowspan="<%= [files.size, 1].max %>">
+              <div>Created: <%= tag.time(run.created_at.strftime("%b %d, %Y %H:%M %Z"), datetime: run.created_at.iso8601) %></div>
+              <% if run.started_at %>
+                <div>Started: <%= tag.time(run.started_at.strftime("%b %d, %Y %H:%M %Z"), datetime: run.started_at.iso8601) %></div>
+              <% end %>
+              <% if run.completed_at %>
+                <div>Finished: <%= tag.time(run.completed_at.strftime("%b %d, %Y %H:%M %Z"), datetime: run.completed_at.iso8601) %></div>
+              <% end %>
+            </td>
+            <td rowspan="<%= [files.size, 1].max %>">
+              <span class="backup-status backup-status--<%= run.status %>"><%= run.status.humanize %></span>
+            </td>
+            <% if files.empty? %>
+              <td colspan="3"><%= run.failed? ? "Backup failed. No files were stored." : "No files stored yet." %></td>
+            <% else %>
+              <%= render "file_cells", file: files.first, run: run %>
+            <% end %>
+          </tr>
+          <% files.drop(1).each do |file| %>
+            <tr><%= render "file_cells", file: file, run: run %></tr>
+          <% end %>
         <% end %>
-      </li>
-    <% end %>
-  </ul>
+      </tbody>
+    </table>
+  </div>
 <% else %>
-  <%# show when this device has no backups yet %>
-  <p>No backups yet.</p>
+  <p>No backups yet. Upload a file to create your first backup.</p>
 <% end %>
 
-<%# open the form to upload another file %>
-<%= link_to "Upload a file", new_device_backup_run_path(@device) %>
-
-<hr>
-
-<%= link_to "Back to your devices", devices_path %>
+<p><%= link_to "Back to your devices", devices_path %></p>
