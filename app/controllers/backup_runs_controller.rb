@@ -21,13 +21,22 @@ class BackupRunsController < ApplicationController
     @backup_run.start!
 
     begin
-      BackupStorage.new.store(uploaded_file, backup_run: @backup_run, original_filename: uploaded_file.original_filename)
+      storage = BackupStorage.new
+      storage.store(uploaded_file, backup_run: @backup_run, original_filename: uploaded_file.original_filename)
       @backup_run.complete!
-    rescue StandardError
+    rescue StandardError => error
       # mark the run failed before logging, so the status is saved even if logging fails
       @backup_run.fail!
       record_security_event("BACKUP_FAILED", current_user)
-      return redirect_to device_backup_runs_path(@device), alert: "Backup failed to store the file."
+
+      alert =
+        if error.is_a?(BackupStorage::TooLarge)
+          "File is larger than the #{helpers.number_to_human_size(storage.max_bytes)} upload limit."
+        else
+          "Backup failed to store the file."
+        end
+
+      return redirect_to device_backup_runs_path(@device), alert: alert
     end
 
     # recorded outside begin/rescue so a logging error can't mark a stored backup as failed

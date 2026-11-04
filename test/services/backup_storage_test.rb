@@ -47,6 +47,37 @@ class BackupStorageTest < ActiveSupport::TestCase
     assert_equal data.bytesize, file.size_bytes
   end
 
+  test "store accepts a file exactly at the size limit" do
+    storage = BackupStorage.new(root: @root, max_bytes: 11)
+    file = storage.store(StringIO.new("hello world"), backup_run: @run, original_filename: "note.txt")
+
+    assert_equal 11, file.size_bytes
+  end
+
+  test "store rejects a file over the size limit and leaves nothing behind" do
+    storage = BackupStorage.new(root: @root, max_bytes: 10)
+
+    assert_raises(BackupStorage::TooLarge) do
+      storage.store(StringIO.new("hello world"), backup_run: @run, original_filename: "note.txt")
+    end
+
+    assert_equal 0, @run.backup_files.count
+    assert_empty Dir.glob(File.join(@root, "**", "*")).select { |path| File.file?(path) }
+  end
+
+  test "store removes the partial file when a later chunk goes over the size limit" do
+    # the first chunk fits and is written, the second one pushes it over
+    storage = BackupStorage.new(root: @root, max_bytes: BackupStorage::CHUNK_SIZE + 10)
+    data = Random.bytes(BackupStorage::CHUNK_SIZE + 123)
+
+    assert_raises(BackupStorage::TooLarge) do
+      storage.store(StringIO.new(data), backup_run: @run, original_filename: "photo.jpg")
+    end
+
+    assert_equal 0, @run.backup_files.count
+    assert_empty Dir.glob(File.join(@root, "**", "*")).select { |path| File.file?(path) }
+  end
+
   test "store removes the written file when the record can't be saved" do
     assert_raises(ActiveRecord::RecordInvalid) do
       @storage.store(
@@ -298,5 +329,38 @@ end
         end
       end
     end
+  end
+
+  test "default_max_bytes is 10 GB when PHONEVAULT_MAX_UPLOAD_MB is not set" do
+    with_max_upload_mb(nil) do
+      assert_equal 10.gigabytes, BackupStorage.default_max_bytes
+    end
+  end
+
+  test "default_max_bytes uses PHONEVAULT_MAX_UPLOAD_MB when configured" do
+    with_max_upload_mb("500") do
+      assert_equal 500.megabytes, BackupStorage.default_max_bytes
+    end
+  end
+
+  test "default_max_bytes rejects a PHONEVAULT_MAX_UPLOAD_MB that isn't a positive whole number" do
+    [ "abc", "0", "-5", "1.5" ].each do |value|
+      with_max_upload_mb(value) do
+        assert_raises(BackupStorage::Error, "expected #{value.inspect} to be rejected") do
+          BackupStorage.default_max_bytes
+        end
+      end
+    end
+  end
+
+  private
+
+  # sets PHONEVAULT_MAX_UPLOAD_MB for the block, then restores the previous value
+  def with_max_upload_mb(value)
+    previous = ENV["PHONEVAULT_MAX_UPLOAD_MB"]
+    ENV["PHONEVAULT_MAX_UPLOAD_MB"] = value
+    yield
+  ensure
+    ENV["PHONEVAULT_MAX_UPLOAD_MB"] = previous
   end
 end

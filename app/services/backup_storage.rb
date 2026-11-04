@@ -12,8 +12,10 @@ class BackupStorage
   class Error < StandardError; end
   class MissingFile < Error; end
   class CorruptedFile < Error; end
+  class TooLarge < Error; end
 
   CHUNK_SIZE = 1.megabyte
+  DEFAULT_MAX_BYTES = 10.gigabytes
 
   # valid UUID format used for generated storage filenames
   UUID_PATTERN =
@@ -34,10 +36,27 @@ class BackupStorage
     base.join("backups")
   end
 
-  attr_reader :root
+  # PHONEVAULT_MAX_UPLOAD_MB sets the limit in megabytes; a bad value fails
+  # loudly instead of quietly allowing uploads of any size
+  def self.default_max_bytes
+    configured_mb = ENV["PHONEVAULT_MAX_UPLOAD_MB"]
 
-  def initialize(root: self.class.default_root, uuid_generator: SecureRandom.method(:uuid))
+    return DEFAULT_MAX_BYTES if configured_mb.blank?
+
+    megabytes = Integer(configured_mb, exception: false)
+
+    unless megabytes&.positive?
+      raise Error, "PHONEVAULT_MAX_UPLOAD_MB must be a positive whole number of megabytes"
+    end
+
+    megabytes.megabytes
+  end
+
+  attr_reader :root, :max_bytes
+
+  def initialize(root: self.class.default_root, max_bytes: self.class.default_max_bytes, uuid_generator: SecureRandom.method(:uuid))
     @root = Pathname(root).expand_path
+    @max_bytes = max_bytes
     @uuid_generator = uuid_generator
   end
 
@@ -70,8 +89,14 @@ class BackupStorage
       temp_created = true
 
       while (chunk = io.read(CHUNK_SIZE))
-        digest << chunk
         size += chunk.bytesize
+
+        # stop before writing the chunk that goes over the limit
+        if size > max_bytes
+          raise TooLarge, "upload is larger than the #{max_bytes} byte limit"
+        end
+
+        digest << chunk
         file.write(chunk)
       end
 
