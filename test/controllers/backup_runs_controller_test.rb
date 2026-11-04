@@ -1,6 +1,111 @@
 require "test_helper"
 
 class BackupRunsControllerTest < ActionDispatch::IntegrationTest
+  test "history displays file metadata and restore links alongside failed runs" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    completed = device.backup_runs.create!(status: :completed,
+      started_at: 2.minutes.ago, completed_at: 1.minute.ago)
+    files = [ "notes.txt", "photo.jpg" ].map do |name|
+      completed.backup_files.create!(original_filename: name, size_bytes: 2048,
+        sha256: "a" * 64, storage_path: "#{completed.id}/#{SecureRandom.uuid}")
+    end
+    device.backup_runs.create!(status: :failed, completed_at: Time.current)
+
+    get device_backup_runs_path(device)
+
+    assert_response :success
+    assert_select "tbody tr", count: 3
+    assert_select "tbody tr:first-child", text: /Backup failed\. No files were stored\./
+    assert_select ".backup-status--completed", text: "Completed"
+    assert_select "td", text: "2 KB", count: 2
+    assert_select "details code", text: "a" * 64, count: 2
+    assert_select "time[datetime=?]", completed.created_at.iso8601
+    assert_select "time[datetime=?]", completed.started_at.iso8601
+    assert_select "time[datetime=?]", completed.completed_at.iso8601
+    files.each do |file|
+      assert_select ".backup-file-details strong", text: file.original_filename
+      assert_select "a[href=?]", restore_device_backup_run_backup_file_path(device, completed, file), text: "Restore"
+    end
+  end
+
+  test "history preloads files and excludes other devices and users" do
+    device = devices(:alice_phone)
+    3.times do |i|
+      run = device.backup_runs.create!(status: :completed, created_at: Time.current - i.minutes)
+      run.backup_files.create!(original_filename: "owned-#{i}.txt", size_bytes: 1024,
+        sha256: "a" * 64, storage_path: "#{run.id}/file")
+    end
+    [ devices(:alice_laptop), devices(:bob_phone) ].each do |other_device|
+      run = other_device.backup_runs.create!(status: :completed)
+      run.backup_files.create!(original_filename: "excluded-#{other_device.id}.txt", size_bytes: 1,
+        sha256: "b" * 64, storage_path: "#{run.id}/file")
+    end
+    sign_in_as users(:alice)
+    file_queries = []
+    subscriber = ->(_name, _start, _finish, _id, payload) do
+      file_queries << payload[:sql] if payload[:sql].match?(/SELECT.*FROM `backup_files`/i)
+    end
+
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+      get device_backup_runs_path(device)
+    end
+
+    assert_response :success
+    assert_select ".backup-file-details strong", count: 3
+    assert_no_match "excluded-", response.body
+    assert_equal 1, file_queries.size, "All history files should be loaded in one query"
+  end
+
+  test "unfinished runs without files show their statuses and no restore links" do
+    device = devices(:alice_phone)
+    device.backup_runs.create!(status: :pending)
+    device.backup_runs.create!(status: :running, started_at: Time.current)
+    sign_in_as users(:alice)
+
+    get device_backup_runs_path(device)
+
+    assert_response :success
+    assert_select ".backup-status--pending", text: "Pending"
+    assert_select ".backup-status--running", text: "Running"
+    assert_select "td", text: "No files stored yet.", count: 2
+    assert_select "a", text: "Restore", count: 0
+  end
+
+  test "history restore link downloads the original stored bytes" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    run = device.backup_runs.create!(status: :completed, completed_at: Time.current)
+    upload = fixture_file_upload("sample_backup.txt", "text/plain")
+    previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+
+    Dir.mktmpdir("phonevault_history_restore") do |root|
+      begin
+        ENV["PHONEVAULT_BACKUP_ROOT"] = root
+        file = BackupStorage.new.store(upload, backup_run: run, original_filename: upload.original_filename)
+        get device_backup_runs_path(device)
+        link = css_select("a").find { |element| element["aria-label"] == "Restore #{file.original_filename}" }
+        assert link, "History should render a restore link for the file"
+        get link["href"]
+        assert_response :success
+        assert_equal File.binread(file_fixture("sample_backup.txt")), response.body
+        assert_includes response.headers["Content-Disposition"], "attachment"
+      ensure
+        previous_root ? ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root : ENV.delete("PHONEVAULT_BACKUP_ROOT")
+      end
+    end
+  end
+
+  test "history explains when no backups exist" do
+    sign_in_as users(:alice)
+
+    get device_backup_runs_path(devices(:alice_phone))
+
+    assert_response :success
+    assert_select "table", count: 0
+    assert_match "No backups yet. Upload a file to create your first backup.", response.body
+  end
+
   test "index requires login" do
     get device_backup_runs_path(devices(:alice_phone))
     assert_redirected_to login_path

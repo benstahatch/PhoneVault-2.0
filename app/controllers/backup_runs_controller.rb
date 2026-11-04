@@ -2,7 +2,7 @@ class BackupRunsController < ApplicationController
   before_action :set_device
 
   def index
-    @backup_runs = @device.backup_runs.order(created_at: :desc)
+    @backup_runs = @device.backup_runs.includes(:backup_files).order(created_at: :desc, id: :desc).load
   end
 
   def new
