@@ -1,11 +1,50 @@
-<h1 class = "dashboard-title">Dashboard</h1>
+<h1 class="mb-6 text-4xl font-bold text-gray-900">Dashboard</h1>
 
-<div class="dashboard-card">
-
-  <h2>Welcome back, <%= @user.display_name %>.</h2>
-
-
+<div class="rounded-xl border border-gray-200 bg-white p-6">
+  <h2 class="mt-0 text-xl font-semibold">Welcome back, <%= @user.display_name %>.</h2>
   <p>Username: <%= @user.username %></p>
 
   <%= link_to "Your devices", devices_path, class: "button button-primary" %>
 </div>
+
+<dl class="my-6 grid gap-4 sm:grid-cols-3">
+  <div class="rounded-xl border border-gray-200 bg-white p-6">
+    <dt class="text-sm font-medium text-gray-600">Devices</dt>
+    <dd class="ml-0 mt-3 text-3xl font-bold text-[#b94e00]" id="device-count"><%= @device_count %></dd>
+  </div>
+  <div class="rounded-xl border border-gray-200 bg-white p-6">
+    <dt class="text-sm font-medium text-gray-600">Stored backup files</dt>
+    <dd class="ml-0 mt-3 text-3xl font-bold text-[#b94e00]" id="file-count"><%= @file_count %></dd>
+  </div>
+  <div class="rounded-xl border border-gray-200 bg-white p-6">
+    <dt class="text-sm font-medium text-gray-600">Recorded backup size</dt>
+    <dd class="ml-0 mt-3 text-3xl font-bold text-[#b94e00]" id="stored-bytes"><%= number_to_human_size(@stored_bytes) %></dd>
+  </div>
+</dl>
+<p>Recorded backup size is the sum of file sizes in the database. Disk capacity and free space are separate measurements.</p>
+
+<section id="latest-successful-backup" class="mt-6 rounded-xl border border-gray-200 bg-white p-6">
+  <h2 class="mt-0 text-xl font-semibold">Latest successful backup</h2>
+  <% if @latest_backup %>
+    <p><%= link_to @latest_backup.device.name, device_backup_runs_path(@latest_backup.device), class: "font-medium text-[#b94e00] underline" %> —
+      <%= tag.time(@latest_backup.completed_at.strftime("%b %d, %Y %H:%M %Z"), datetime: @latest_backup.completed_at.iso8601) %></p>
+  <% else %>
+    <p>No successful backups yet.</p>
+  <% end %>
+</section>
+
+<section class="dashboard-activity mt-6 rounded-xl border border-gray-200 bg-white p-6">
+  <h2 class="mt-0 text-xl font-semibold">Recent backup activity</h2>
+  <% if @recent_runs.any? %>
+    <p class="text-sm text-gray-600">Up to five most recent runs, ordered by creation time. Select a device to view its backup history.</p>
+    <ul class="list-none pl-0">
+      <% @recent_runs.each do |run| %>
+        <li class="flex flex-wrap items-center gap-3 border-b border-gray-100 py-3"><%= link_to run.device.name, device_backup_runs_path(run.device), class: "font-medium text-[#b94e00] underline" %> —
+          <span class="backup-status rounded-full bg-orange-50 px-3 py-1 text-sm font-semibold text-[#b94e00]"><%= run.status.humanize %></span> —
+          <%= tag.time(run.created_at.strftime("%b %d, %Y %H:%M %Z"), datetime: run.created_at.iso8601) %></li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>No backup activity yet. Register a device and upload a file to get started.</p>
+  <% end %>
+</section>
