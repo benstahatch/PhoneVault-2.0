@@ -173,7 +173,7 @@ class BackupStorage
     real_root = root.realpath
     real_path = path.realpath
 
-    # reject sym[118;1:3ulinks that resolve outside the real backup directory
+    # reject symlinks that resolve outside the real backup directory
     unless real_path.to_s.start_with?("#{real_root}#{File::SEPARATOR}")
       raise Error, "resolved storage path for backup file #{backup_file.id} is outside the storage root"
     end

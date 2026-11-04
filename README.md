@@ -330,7 +330,7 @@ PhoneVault refuses a normal restore if the stored file is missing, corrupted, ou
 
 # Local Development
 
-The current developm[118;1:3uent setup is:
+The current development setup is:
 
 ```text
 Linux host
