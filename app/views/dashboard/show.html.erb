@@ -1,11 +1,68 @@
-<h1 class = "dashboard-title">Dashboard</h1>
+<% content_for :head do %>
+  <style>
+    /* Only the dashboard changes the page background; shared pages keep their styles. */
+    body:has(#dashboard) { background-color: #fff; }
+  </style>
+<% end %>
 
-<div class="dashboard-card">
+<div id="dashboard" class="text-neutral-900 [overflow-wrap:anywhere]">
+<h1 class="mb-6 text-3xl sm:text-4xl font-bold text-neutral-900">Dashboard</h1>
 
-  <h2>Welcome back, <%= @user.display_name %>.</h2>
+<div class="rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+  <h2 class="mt-0 text-xl font-semibold">Welcome back, <%= @user.display_name %>.</h2>
+  <p class="my-4 text-sm text-neutral-600">Username: <%= @user.username %></p>
 
+  <%= link_to "Your devices", devices_path, class: "inline-flex box-border min-h-12 items-center justify-center rounded-lg bg-[#171717] px-5 py-3 text-sm font-semibold text-white no-underline transition-colors duration-150 hover:bg-[#e66b00] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neutral-900 motion-reduce:transition-none" %>
+</div>
 
-  <p>Username: <%= @user.username %></p>
+<dl class="my-6 grid gap-4 sm:grid-cols-3">
+  <div class="rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+    <dt class="text-sm font-medium text-neutral-600">Devices</dt>
+    <dd class="ml-0 mt-3 text-3xl font-bold text-neutral-900" id="device-count"><%= @device_count %></dd>
+  </div>
+  <div class="rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+    <dt class="text-sm font-medium text-neutral-600">Stored backup files</dt>
+    <dd class="ml-0 mt-3 text-3xl font-bold text-neutral-900" id="file-count"><%= @file_count %></dd>
+  </div>
+  <div class="rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+    <dt class="text-sm font-medium text-neutral-600">Recorded backup size</dt>
+    <dd class="ml-0 mt-3 text-3xl font-bold text-neutral-900" id="stored-bytes"><%= number_to_human_size(@stored_bytes) %></dd>
+  </div>
+</dl>
+<p class="text-sm leading-relaxed text-neutral-600">Recorded backup size is the sum of file sizes in the database. Disk capacity and free space are separate measurements.</p>
 
-  <%= link_to "Your devices", devices_path, class: "button button-primary" %>
+<section id="latest-successful-backup" class="mt-6 rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+  <h2 class="mt-0 text-xl font-semibold">Latest successful backup</h2>
+  <% if @latest_backup %>
+    <p><%= link_to @latest_backup.device.name, device_backup_runs_path(@latest_backup.device), class: "min-w-0 font-medium text-neutral-900 underline underline-offset-4 transition-colors duration-150 hover:text-[#e66b00] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neutral-900 motion-reduce:transition-none" %> —
+      <%= tag.time(@latest_backup.completed_at.strftime("%b %d, %Y %H:%M %Z"), datetime: @latest_backup.completed_at.iso8601) %></p>
+  <% else %>
+    <p>No successful backups yet.</p>
+  <% end %>
+</section>
+
+<section class="dashboard-activity mt-6 rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+  <h2 class="mt-0 text-xl font-semibold">Recent backup activity</h2>
+  <% if @recent_runs.any? %>
+    <p class="text-sm text-neutral-600">Up to five most recent runs, ordered by creation time. Select a device to view its backup history.</p>
+    <ul class="list-none pl-0">
+      <% @recent_runs.each do |run| %>
+        <li class="flex flex-wrap items-center gap-3 border-b border-neutral-200 py-3"><%= link_to run.device.name, device_backup_runs_path(run.device), class: "min-w-0 font-medium text-neutral-900 underline underline-offset-4 transition-colors duration-150 hover:text-[#e66b00] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neutral-900 motion-reduce:transition-none" %> —
+          <% badge_class, symbol = {
+            "completed" => [ "border-solid border-neutral-300 bg-neutral-100 text-neutral-900", "✓" ],
+            "failed" => [ "border-solid border-neutral-900 bg-neutral-900 text-white", "!" ],
+            "running" => [ "border-solid border-neutral-500 bg-white text-neutral-900", "↻" ],
+            "pending" => [ "border-dashed border-neutral-400 bg-white text-neutral-600", "…" ]
+          }.fetch(run.status) %>
+          <span class="backup-status inline-flex items-center gap-2 rounded-md border px-3 py-1 text-sm font-semibold <%= badge_class %>">
+            <span aria-hidden="true" data-symbol="<%= symbol %>" class="mr-1.5 before:content-[attr(data-symbol)]"></span><span><%= run.status.humanize %></span>
+          </span> —
+          <%= tag.time(run.created_at.strftime("%b %d, %Y %H:%M %Z"), datetime: run.created_at.iso8601) %></li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>No backup activity yet. Register a device and upload a file to get started.</p>
+  <% end %>
+</section>
+
 </div>
