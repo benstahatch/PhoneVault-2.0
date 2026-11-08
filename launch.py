@@ -11,8 +11,10 @@ Ruby, Rails, and MySQL all run inside containers.
     python3 launch.py down      stop the containers (data is kept)
 """
 
+import grp
 import json
 import os
+import pwd
 import secrets
 import shutil
 import socket
@@ -126,12 +128,32 @@ def check_docker():
         )
 
     if run(["docker", "info"], quiet=True).returncode != 0:
+        if docker_group_not_active_yet():
+            # being added to the docker group only counts from your next login, but sudo
+            # reads your groups fresh, so rerunning through it works without logging out
+            print("You were just added to the docker group, which normally needs a new login.")
+            print("Running through sudo this time instead (it may ask for your password).")
+            user = pwd.getpwuid(os.getuid()).pw_name
+            os.execvp("sudo", ["sudo", "-u", user, sys.executable, str(Path(__file__).resolve()), *sys.argv[1:]])
+
         fail(
             "Docker is installed but this user can't talk to it.\n"
             "Either start Docker (sudo systemctl start docker) or add yourself to the docker group:\n"
             "  sudo usermod -aG docker $USER\n"
             "then log out and back in."
         )
+
+
+def docker_group_not_active_yet():
+    # SUDO_USER means we already reran through sudo, so don't try again
+    if os.environ.get("SUDO_USER") or shutil.which("sudo") is None:
+        return False
+    try:
+        docker_group = grp.getgrnam("docker")
+    except KeyError:
+        return False
+    user = pwd.getpwuid(os.getuid()).pw_name
+    return user in docker_group.gr_mem and docker_group.gr_gid not in os.getgroups()
 
 
 def compose(*args):

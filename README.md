@@ -336,9 +336,17 @@ On a fresh Debian, Ubuntu, Raspberry Pi OS, or Fedora machine, one command insta
 curl -fsSL https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
 ```
 
+If curl isn't installed (Ubuntu Desktop ships without it), use wget, which it does have:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
+```
+
 `install.sh` installs only what is missing (Git, curl, Python 3, and Docker through the official get.docker.com script), clones the repository into `~/PhoneVault-2.0`, and runs `launch.py`. It asks for your `sudo` password to install packages. You can read [install.sh](install.sh) before running it.
 
-If you already cloned the repository, run `./install.sh` from inside it. To install from a branch instead of `main`, set `PHONEVAULT_BRANCH`, for example `curl -fsSL https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/docker-launcher/install.sh | PHONEVAULT_BRANCH=docker-launcher bash`.
+No logout or restart is needed. Installing Docker adds you to the `docker` group, which normally only applies at your next login, so until then `launch.py` reruns itself through `sudo` (as you, not as root).
+
+If you already cloned the repository, run `./install.sh` from inside it. To install from a branch instead of `main`, set `PHONEVAULT_BRANCH`, for example `wget -qO- https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/docker-launcher/install.sh | PHONEVAULT_BRANCH=docker-launcher bash`.
 
 If Docker, Git, and Python 3 are already installed, you can skip `install.sh`:
 

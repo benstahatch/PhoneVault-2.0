@@ -3,6 +3,10 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
 #
+# or, on systems without curl (like Ubuntu Desktop):
+#
+#   wget -qO- https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
+#
 # or, inside a clone of the repository:  ./install.sh
 #
 # It installs only what is missing: git, curl, python3, and Docker (through the
@@ -86,11 +90,6 @@ fi
 cd "$project_dir"
 
 say "Starting PhoneVault"
-if docker info >/dev/null 2>&1; then
-  python3 launch.py
-elif command -v sg >/dev/null; then
-  # sg runs the launcher with the new docker group, so no logout is needed first
-  sg docker -c "python3 launch.py"
-else
-  fail "Log out and back in so the docker group applies, then run: cd $project_dir && python3 launch.py"
-fi
+# if the docker group was just added, launch.py reruns itself through sudo,
+# so no logout or restart is needed
+python3 launch.py
