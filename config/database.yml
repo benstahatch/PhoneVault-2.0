@@ -16,7 +16,9 @@ default: &default
   username:  <%= ENV.fetch("MYSQL_USER", "root") %>
   password: <%= ENV["MYSQL_PASSWORD"] %>
   host: <%= ENV.fetch("DB_HOST") { "127.0.0.1" } %>
-  port: <%= ENV.fetch("MYSQL_HOST_PORT") { 3308 } %>
+  # DB_PORT is set inside the Docker app container, where MySQL listens on 3306;
+  # on the host Rails reaches MySQL through the mapped MYSQL_HOST_PORT
+  port: <%= ENV.fetch("DB_PORT") { ENV.fetch("MYSQL_HOST_PORT") { 3308 } } %>
 
 
 development:
@@ -56,21 +58,20 @@ test:
 # Read https://guides.rubyonrails.org/configuring.html#configuring-a-database
 # for a full overview on how database connection configuration can be specified.
 #
+# production uses the same .env database settings as development
 production:
   primary: &primary_production
     <<: *default
-    database: phone_vault_2_0_production
-    username: phone_vault_2_0
-    password: <%= ENV["PHONE_VAULT_2_0_DATABASE_PASSWORD"] %>
+    database: <%= ENV.fetch("MYSQL_DATABASE") { "phonevault2" } %>
   cache:
     <<: *primary_production
-    database: phone_vault_2_0_production_cache
+    database: <%= ENV.fetch("MYSQL_DATABASE") { "phonevault2" } %>_cache
     migrations_paths: db/cache_migrate
   queue:
     <<: *primary_production
-    database: phone_vault_2_0_production_queue
+    database: <%= ENV.fetch("MYSQL_DATABASE") { "phonevault2" } %>_queue
     migrations_paths: db/queue_migrate
   cable:
     <<: *primary_production
-    database: phone_vault_2_0_production_cable
+    database: <%= ENV.fetch("MYSQL_DATABASE") { "phonevault2" } %>_cable
     migrations_paths: db/cable_migrate
