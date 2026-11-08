@@ -328,6 +328,37 @@ PhoneVault refuses a normal restore if the stored file is missing, corrupted, ou
 
 ---
 
+# Quick Start: Run Everything in Docker
+
+On a fresh Linux server you only need Docker (with the Compose plugin), Git, and Python 3. Ruby, Rails, and MySQL all run in containers.
+
+```bash
+# Debian, Ubuntu, or Raspberry Pi OS: install Docker, then log out and back in
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+
+git clone https://github.com/benstahatch/PhoneVault-2.0.git
+cd PhoneVault-2.0
+python3 launch.py
+```
+
+`launch.py` creates `.env` with random passwords and a Rails secret, creates the backup folder, starts MySQL, waits for it to be ready, then builds and starts Rails. When it finishes it prints the address to open, by default `http://<server>:8080`. Open `/signup` to create the first account.
+
+| Command | What it does |
+| --- | --- |
+| `python3 launch.py` | Set up and start PhoneVault |
+| `python3 launch.py status` | Show the containers |
+| `python3 launch.py logs` | Follow the Rails logs |
+| `python3 launch.py down` | Stop PhoneVault; the database and backups are kept |
+
+Both containers use `restart: unless-stopped`, so PhoneVault comes back after a reboot once Docker starts.
+
+Backups are stored in `storage/backups/` inside the repository unless `PHONEVAULT_BACKUP_ROOT` in `.env` names another folder. The folder must be owned by user id 1000, the user Rails runs as inside the container.
+
+The Rails container only starts with Compose's `app` profile, so the development workflow below (`docker compose up -d` starts just MySQL) is unchanged.
+
+---
+
 # Local Development
 
 The current development setup is:
@@ -342,7 +373,7 @@ Linux host
   `-- Docker Compose runs MySQL
 ```
 
-The current Compose setup starts the database. Rails itself is still started from the Linux host.
+In this development setup, Compose starts only the database and Rails is started from the Linux host. To run Rails in Docker too, see [Quick Start: Run Everything in Docker](#quick-start-run-everything-in-docker).
 
 This is a development setup, not a finished always-on production deployment.
 
@@ -603,11 +634,9 @@ A future storage check should detect this and refuse to silently write to the wr
 
 # Docker Storage: Current and Future
 
-## Current setup
+## Development setup (Rails on the host)
 
-Rails currently runs directly on Linux.
-
-MySQL runs in Docker.
+In the development setup, Rails runs directly on Linux and MySQL runs in Docker.
 
 Therefore:
 
@@ -617,11 +646,11 @@ PHONEVAULT_BACKUP_ROOT=/mnt/phonevault-backups
 
 currently refers directly to that Linux host path.
 
-No Docker bind mount is required for Rails because Rails is not currently running inside a container.
+No Docker bind mount is required in this setup because Rails is not running inside a container.
 
-## Future containerized Rails setup
+## Containerized Rails setup
 
-If Rails becomes part of the supported Docker Compose deployment, the desired storage setup is:
+When Rails runs in Docker (`python3 launch.py`, or `docker compose --profile app up -d`), the storage setup is:
 
 ```text
 Linux host
@@ -640,7 +669,7 @@ The host path decides where the bytes physically live.
 
 The container path gives Rails a stable internal location.
 
-This is future work. The current development Compose setup should not be described as if it already provides this bind mount.
+In Docker, `PHONEVAULT_BACKUP_ROOT` in `.env` names the host folder; Compose mounts it at `/rails/storage/backups` and tells Rails to use that path.
 
 ---
 
@@ -841,6 +870,8 @@ PhoneVault is currently started manually.
 
 Manual startup is useful during development because logs remain visible and services are easy to restart.
 
+For an always-on install, use `python3 launch.py` from the [Docker quick start](#quick-start-run-everything-in-docker). It starts MySQL, waits until it is ready, then starts Rails, and both containers restart automatically.
+
 ## Planned permanent deployment
 
 A permanent PhoneVault server should eventually recover automatically after a reboot.
@@ -870,7 +901,7 @@ Possible approaches include:
 - Docker Compose startup
 - systemd
 
-The final deployment method has not been chosen yet.
+The Docker quick start (`launch.py`) already covers part of this: Docker starts MySQL, Rails waits for the database healthcheck, and both containers restart after a reboot. Waiting for the backup disk to mount is not handled yet, and the final deployment method has not been chosen.
 
 The configured backup storage should be verified before PhoneVault begins accepting uploads.
 
@@ -1031,6 +1062,8 @@ fix the README too
 | `DB_HOST`                | `127.0.0.1` when used         | Rails database host                       |
 | `PHONEVAULT_BACKUP_ROOT` | `storage/backups/` when unset | Optional absolute path for backup storage |
 | `PHONEVAULT_MAX_UPLOAD_MB` | `10240` (10 GB) when unset  | Optional upload size limit in whole megabytes |
+| `PHONEVAULT_PORT` | `8080` when unset | Port the Docker app is served on |
+| `SECRET_KEY_BASE` | Generated by `launch.py` | Rails secret used in production (Docker) |
 
 ---
 
@@ -1074,7 +1107,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Track required packages such as MySQL client headers and libvips.
 - [x] Keep secrets and local configuration out of Git.
 - [x] Document the current manual setup process.
-- [ ] Add `PHONEVAULT_BACKUP_ROOT` to `.env.example`.
+- [x] Add `PHONEVAULT_BACKUP_ROOT` to `.env.example`.
 - [ ] Test setup from a completely fresh Linux clone.
 - [ ] Test setup on another Linux machine.
 - [ ] Fix any README commands that fail during a fresh setup.
@@ -1145,7 +1178,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Store backup bytes separately from MySQL metadata.
 - [x] Document local, `/srv`, and `/mnt` storage choices.
 - [x] Explain the difference between another directory and another physical disk.
-- [ ] Add `PHONEVAULT_BACKUP_ROOT` to the example environment file.
+- [x] Add `PHONEVAULT_BACKUP_ROOT` to the example environment file.
 - [ ] Decide on the recommended permanent Linux storage directory.
 - [ ] Detect/report unavailable storage.
 - [ ] Detect when an expected external mount is missing.
@@ -1157,7 +1190,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [ ] Display PhoneVault storage usage.
 - [ ] Display the number of stored backup files.
 - [ ] Build the storage dashboard.
-- [ ] Support Docker host bind mounts when Rails becomes part of the supported container deployment.
+- [x] Support Docker host bind mounts when Rails becomes part of the supported container deployment.
 
 ## Testing and Reliability
 
@@ -1189,7 +1222,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [ ] Validate the full documented procedure on a clean Linux installation.
 - [ ] Decide on the permanent deployment method.
 - [ ] Add automatic startup after Linux reboot.
-- [ ] Verify MySQL readiness before Rails depends on it.
+- [x] Verify MySQL readiness before Rails depends on it.
 - [ ] Verify the configured backup disk is mounted before uploads are accepted.
 - [ ] Evaluate Docker restart policies.
 - [ ] Evaluate systemd where appropriate.
