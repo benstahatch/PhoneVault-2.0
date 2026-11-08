@@ -18,5 +18,43 @@ services:
       - mysql_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
 
+    # reports healthy only once MySQL accepts real TCP connections, so the app
+    # never starts while the database is still initializing
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # Rails in production mode. Only started with `--profile app` (launch.py does
+  # this), so plain `docker compose up -d` still starts just MySQL for development.
+  app:
+    profiles: ["app"]
+    build: .
+    image: phonevault:latest
+    container_name: phonevault2-app
+
+    restart: unless-stopped
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    env_file: .env
+
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      # the path inside the container; the host folder is chosen by the volume below
+      PHONEVAULT_BACKUP_ROOT: /rails/storage/backups
+
+    ports:
+      - "${PHONEVAULT_PORT:-3000}:80"
+
+    volumes:
+      # PHONEVAULT_BACKUP_ROOT in .env is the folder on the host
+      - ${PHONEVAULT_BACKUP_ROOT:-./storage/backups}:/rails/storage/backups
+
 volumes:
   mysql_data:
