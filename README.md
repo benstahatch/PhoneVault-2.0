@@ -330,19 +330,25 @@ PhoneVault refuses a normal restore if the stored file is missing, corrupted, ou
 
 # Quick Start: Run Everything in Docker
 
-On a fresh Linux server you only need Docker (with the Compose plugin), Git, and Python 3. Ruby, Rails, and MySQL all run in containers.
+On a fresh Debian, Ubuntu, Raspberry Pi OS, or Fedora machine, one command installs everything and starts PhoneVault:
 
 ```bash
-# Debian, Ubuntu, or Raspberry Pi OS: install Docker, then log out and back in
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
+curl -fsSL https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
+```
 
+`install.sh` installs only what is missing (Git, curl, Python 3, and Docker through the official get.docker.com script), clones the repository into `~/PhoneVault-2.0`, and runs `launch.py`. It asks for your `sudo` password to install packages. You can read [install.sh](install.sh) before running it.
+
+If you already cloned the repository, run `./install.sh` from inside it. To install from a branch instead of `main`, set `PHONEVAULT_BRANCH`, for example `curl -fsSL https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/docker-launcher/install.sh | PHONEVAULT_BRANCH=docker-launcher bash`.
+
+If Docker, Git, and Python 3 are already installed, you can skip `install.sh`:
+
+```bash
 git clone https://github.com/benstahatch/PhoneVault-2.0.git
 cd PhoneVault-2.0
 python3 launch.py
 ```
 
-`launch.py` creates `.env` with random passwords and a Rails secret, creates the backup folder, starts MySQL, waits for it to be ready, then builds and starts Rails. When it finishes it prints the address to open, by default `http://<server>:8080`. Open `/signup` to create the first account.
+Ruby, Rails, and MySQL all run in containers. `launch.py` creates `.env` with random passwords and a Rails secret, creates the backup folder, starts MySQL, waits for it to be ready, then builds and starts Rails. When it finishes it prints the address to open, by default `http://<server>:8080`. Open `/signup` to create the first account.
 
 | Command | What it does |
 | --- | --- |
