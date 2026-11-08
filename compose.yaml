@@ -50,7 +50,7 @@ services:
       PHONEVAULT_BACKUP_ROOT: /rails/storage/backups
 
     ports:
-      - "${PHONEVAULT_PORT:-3000}:80"
+      - "${PHONEVAULT_PORT:-8080}:80"
 
     volumes:
       # PHONEVAULT_BACKUP_ROOT in .env is the folder on the host
