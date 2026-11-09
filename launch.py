@@ -90,9 +90,9 @@ def up():
         print(f"  from your network:   http://{lan_ip}:{port}")
     print(f"  create an account:   http://localhost:{port}/signup")
     print()
-    # "python3 launch.py" only finds the script from inside the project folder, so show the full path
+    # "python3 launch.py" only finds the script from inside the project folder
     print("To stop it, go to the PhoneVault folder first, then run launch.py down:")
-    print(f"  cd {PROJECT_DIR}")
+    print(f"  cd {home_relative(PROJECT_DIR)}")
     print("  python3 launch.py down")
 
 
@@ -348,6 +348,14 @@ def local_ip_address():
             return probe.getsockname()[0]
     except OSError:
         return None
+
+
+def home_relative(path):
+    # "~" means "your home folder", so the default install shows ~/PhoneVault-2.0 for every user
+    try:
+        return "~/" + str(path.relative_to(Path.home()))
+    except ValueError:
+        return str(path)
 
 
 def step(message):
