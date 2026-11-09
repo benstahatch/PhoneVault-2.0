@@ -5,7 +5,7 @@
 #
 # or, on systems without curl (like Ubuntu Desktop):
 #
-#   wget -qO- https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
+#   wget --no-verbose --output-document=- https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
 #
 # or, inside a clone of the repository:  ./install.sh
 #
