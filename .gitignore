@@ -53,3 +53,6 @@
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
+
+# Python bytecode from running launch.py
+__pycache__/
