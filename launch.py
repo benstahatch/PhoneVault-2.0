@@ -90,7 +90,10 @@ def up():
         print(f"  from your network:   http://{lan_ip}:{port}")
     print(f"  create an account:   http://localhost:{port}/signup")
     print()
-    print("Stop it with:  python3 launch.py down")
+    # "python3 launch.py" only finds the script from inside the project folder, so show the full path
+    print("To stop it, go to the PhoneVault folder first, then run launch.py down:")
+    print(f"  cd {PROJECT_DIR}")
+    print("  python3 launch.py down")
 
 
 def status():
