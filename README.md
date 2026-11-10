@@ -1122,9 +1122,9 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Keep secrets and local configuration out of Git.
 - [x] Document the current manual setup process.
 - [x] Add `PHONEVAULT_BACKUP_ROOT` to `.env.example`.
-- [ ] Test setup from a completely fresh Linux clone.
-- [ ] Test setup on another Linux machine.
-- [ ] Fix any README commands that fail during a fresh setup.
+- [x] Test setup from a completely fresh Linux clone.
+- [x] Test setup on another Linux machine.
+- [x] Fix any README commands that fail during a fresh setup.
 - [ ] Finalize the supported permanent deployment method.
 
 ## Authentication and Security
@@ -1201,8 +1201,8 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [ ] Research startup ordering when an external disk mounts after boot.
 - [ ] Display total disk capacity.
 - [ ] Display used/available disk capacity.
-- [ ] Display PhoneVault storage usage.
-- [ ] Display the number of stored backup files.
+- [x] Display PhoneVault storage usage.
+- [x] Display the number of stored backup files.
 - [ ] Build the storage dashboard.
 - [x] Support Docker host bind mounts when Rails becomes part of the supported container deployment.
 
@@ -1224,7 +1224,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Test completed-file collision protection.
 - [x] Test private file permissions.
 - [ ] Follow the README from a clean environment and record failed commands/errors.
-- [ ] Test project/setup scripts from a fresh clone.
+- [x] Test project/setup scripts from a fresh clone.
 
 ## Linux Deployment and Remote Access
 
@@ -1235,14 +1235,14 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Keep MySQL bound locally rather than exposing it directly to the public internet.
 - [ ] Validate the full documented procedure on a clean Linux installation.
 - [ ] Decide on the permanent deployment method.
-- [ ] Add automatic startup after Linux reboot.
+- [x] Add automatic startup after Linux reboot.
 - [x] Verify MySQL readiness before Rails depends on it.
 - [ ] Verify the configured backup disk is mounted before uploads are accepted.
-- [ ] Evaluate Docker restart policies.
+- [x] Evaluate Docker restart policies.
 - [ ] Evaluate systemd where appropriate.
 - [ ] Test a full reboot and confirm PhoneVault returns with the correct storage.
 - [ ] Test access from another laptop.
-- [ ] Test browser access from a phone.
+- [x] Test browser access from a phone.
 - [ ] Keep Tailscale optional.
 
 ## Disaster Recovery
