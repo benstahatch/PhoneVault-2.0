@@ -1172,7 +1172,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Use server-generated UUID storage filenames.
 - [x] Use partial files before publishing a completed backup.
 - [x] Prevent existing completed backup files from being overwritten.
-- [ ] Verify the complete backup workflow from a fresh Linux installation.
+- [x] Verify the complete backup workflow from a fresh Linux installation.
 
 ## Restore System
 
@@ -1184,7 +1184,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Handle corrupted stored files.
 - [x] Reject path traversal and symlink escapes.
 - [ ] Improve backup-history presentation and file details.
-- [ ] Verify the complete browser backup -> restore workflow from a fresh installation.
+- [x] Verify the complete browser backup -> restore workflow from a fresh installation.
 
 ## Storage Configuration and Dashboard
 
