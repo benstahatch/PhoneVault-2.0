@@ -5,8 +5,12 @@
   <p role="alert"><%= flash[:alert] %></p>
 <% end %>
 
-<h1><%= @device.name %> — Backups</h1>
-<p><%= link_to "Upload a file", new_device_backup_run_path(@device), class: "button button-primary" %></p>
+<h1 class="mb-6 text-3xl sm:text-4xl font-bold text-neutral-900"><%= @device.name %> <span class="font-normal text-neutral-600">— Backups</span></h1>
+
+<div class="mb-6 flex flex-wrap gap-3">
+  <%= link_to "Upload a file", new_device_backup_run_path(@device), class: button_classes %>
+  <%= link_to "Back to your devices", devices_path, class: button_classes(:secondary) %>
+</div>
 
 <% if @backup_runs.any? %>
   <div class="backup-history-scroll" role="region" aria-label="Backup history" tabindex="0">
@@ -51,7 +55,5 @@
     </table>
   </div>
 <% else %>
-  <p>No backups yet. Upload a file to create your first backup.</p>
+  <p class="rounded-xl border border-neutral-200 bg-white p-5 text-neutral-600">No backups yet. Upload a file to create your first backup.</p>
 <% end %>
-
-<p><%= link_to "Back to your devices", devices_path %></p>
