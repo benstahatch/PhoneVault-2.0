@@ -17,6 +17,18 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match devices(:bob_phone).name, response.body
   end
 
+  test "index shows its links as buttons" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+
+    get devices_path
+
+    assert_select "a.rounded-lg[href='#{new_device_path}']", text: "Register a device"
+    assert_select "a.rounded-lg[href='#{dashboard_path}']", text: "Back to dashboard"
+    assert_select "a.rounded-lg[href='#{device_backup_runs_path(device)}']", text: "Backups"
+    assert_select "a.rounded-lg[href='#{new_device_backup_run_path(device)}']", text: "Upload"
+  end
+
   test "create registers a device for the current user" do
     sign_in_as users(:alice)
 
