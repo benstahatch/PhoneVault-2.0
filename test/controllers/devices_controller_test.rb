@@ -29,6 +29,16 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.rounded-lg[href='#{new_device_backup_run_path(device)}']", text: "Upload"
   end
 
+  test "register form uses styled buttons" do
+    sign_in_as users(:alice)
+
+    get new_device_path
+
+    assert_response :success
+    assert_select "input[type=submit][value='Register device'].rounded-lg"
+    assert_select "a.rounded-lg[href='#{devices_path}']", text: "Back to your devices"
+  end
+
   test "create registers a device for the current user" do
     sign_in_as users(:alice)
 
