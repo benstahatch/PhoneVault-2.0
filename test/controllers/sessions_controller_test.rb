@@ -1,6 +1,12 @@
 require "test_helper"
 
 class SessionsControllerTest < ActionDispatch::IntegrationTest
+  test "login username field turns off phone autocorrect and capitalization" do
+    get login_path
+
+    assert_select "input[name='session[username]'][autocapitalize='none'][autocorrect='off'][spellcheck='false']"
+  end
+
   test "successful login records LOGIN_SUCCESS for the user" do
     assert_difference("SecurityEvent.count", 1) do
       log_in "alice", "secret123"
