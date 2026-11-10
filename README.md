@@ -1240,8 +1240,8 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [ ] Verify the configured backup disk is mounted before uploads are accepted.
 - [x] Evaluate Docker restart policies.
 - [ ] Evaluate systemd where appropriate.
-- [ ] Test a full reboot and confirm PhoneVault returns with the correct storage.
-- [ ] Test access from another laptop.
+- [x] Test a full reboot and confirm PhoneVault returns with the correct storage.
+- [x] Test access from another laptop.
 - [x] Test browser access from a phone.
 - [ ] Keep Tailscale optional.
 
