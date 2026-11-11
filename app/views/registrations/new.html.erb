@@ -18,7 +18,10 @@
     <%= form.label :username %>
     <%= form.text_field :username,
           required: true,
-          autocomplete: "username" %>
+          autocomplete: "username",
+          autocapitalize: "none",
+          autocorrect: "off",
+          spellcheck: false %>
   </div>
 
   <div>

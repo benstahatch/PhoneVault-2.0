@@ -1,6 +1,12 @@
 require "test_helper"
 
 class RegistrationsControllerTest < ActionDispatch::IntegrationTest
+  test "signup username field turns off phone autocorrect and capitalization" do
+    get signup_path
+
+    assert_select "input[name='user[username]'][autocapitalize='none'][autocorrect='off'][spellcheck='false']"
+  end
+
   test "signup form loads without logging in" do
     get signup_path
 
