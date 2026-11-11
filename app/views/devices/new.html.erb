@@ -1,33 +1,35 @@
-<h1>Register a Device</h1>
+<% field_classes = "block box-border w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-neutral-900 focus:border-orange-600 focus:outline-2 focus:outline-orange-600" %>
+<% label_classes = "mb-2 block text-sm font-medium text-neutral-700" %>
 
-<% if @device.errors.any? %>
-  <div>
-    <h2><%= pluralize(@device.errors.count, "error") %> prevented this device from being registered:</h2>
+<h1 class="mb-6 text-3xl sm:text-4xl font-bold text-neutral-900">Register a Device</h1>
 
-    <ul>
-      <% @device.errors.full_messages.each do |message| %>
-        <li><%= message %></li>
-      <% end %>
-    </ul>
-  </div>
-<% end %>
+<div class="box-border max-w-lg rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+  <% if @device.errors.any? %>
+    <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      <h2 class="m-0 mb-2 text-sm font-semibold"><%= pluralize(@device.errors.count, "error") %> prevented this device from being registered:</h2>
 
-<%= form_with model: @device do |form| %>
-  <div>
-    <%= form.label :name %>
-    <%= form.text_field :name, required: true %>
-  </div>
+      <ul class="m-0 pl-5">
+        <% @device.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
 
-  <div>
-    <%= form.label :device_type %>
-    <%= form.select :device_type, Device.device_types.keys %>
-  </div>
+  <%= form_with model: @device do |form| %>
+    <div class="mb-5">
+      <%= form.label :name, class: label_classes %>
+      <%= form.text_field :name, required: true, placeholder: "e.g. My iPhone", class: field_classes %>
+    </div>
 
-  <div>
-    <%= form.submit "Register device" %>
-  </div>
-<% end %>
+    <div class="mb-6">
+      <%= form.label :device_type, class: label_classes %>
+      <%= form.select :device_type, Device.device_types.keys.map { |type| [ type.humanize, type ] }, {}, class: field_classes %>
+    </div>
 
-<hr>
-
-<%= link_to "Back to your devices", devices_path %>
+    <div class="flex flex-wrap gap-3">
+      <%= form.submit "Register device", class: "#{button_classes} cursor-pointer" %>
+      <%= link_to "Back to your devices", devices_path, class: button_classes(:secondary) %>
+    </div>
+  <% end %>
+</div>
