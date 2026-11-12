@@ -28,6 +28,7 @@ class DevicesController < ApplicationController
 
     # only the name can change; the device type stays what it was registered as
     if @device.update(params.expect(device: %i[name]))
+      record_security_event("DEVICE_RENAMED", current_user)
       redirect_to devices_path, notice: "Device renamed to #{@device.name}."
     else
       render :edit, status: :unprocessable_entity

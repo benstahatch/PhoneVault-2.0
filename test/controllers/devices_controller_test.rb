@@ -137,6 +137,26 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_match "Device renamed to Work Phone.", response.body
   end
 
+  test "update records DEVICE_RENAMED for the current user" do
+    sign_in_as users(:alice)
+
+    assert_difference("SecurityEvent.count", 1) do
+      patch device_path(devices(:alice_phone)), params: { device: { name: "Work Phone" } }
+    end
+
+    event = SecurityEvent.last
+    assert_equal "DEVICE_RENAMED", event.event_type
+    assert_equal users(:alice), event.user
+  end
+
+  test "update records no event when the rename is rejected" do
+    sign_in_as users(:alice)
+
+    assert_no_difference("SecurityEvent.count") do
+      patch device_path(devices(:alice_phone)), params: { device: { name: "" } }
+    end
+  end
+
   test "update ignores attempts to change the device type or owner" do
     sign_in_as users(:alice)
     device = devices(:alice_phone)
