@@ -371,6 +371,19 @@ Backups are stored in `storage/backups/` inside the repository unless `PHONEVAUL
 
 The Rails container only starts with Compose's `app` profile, so the development workflow below (`docker compose up -d` starts just MySQL) is unchanged.
 
+## Demo Data
+
+To show PhoneVault without starting from an empty account, create a `demo` account with three devices and a few weeks of backups, including one failed run. The files are real (small photos, contacts, a calendar, notes), so Restore works on them.
+
+```bash
+docker compose exec app bin/rails phonevault:demo         # with launch.py
+bin/rails phonevault:demo                                 # Rails on the host
+```
+
+It prints a random password once. Set `DEMO_PASSWORD` to choose it instead, for example `docker compose exec -e DEMO_PASSWORD=your-password app bin/rails phonevault:demo`. Delete the account, its backups, and its stored files with `bin/rails phonevault:demo:reset` (or `docker compose exec app bin/rails phonevault:demo:reset`).
+
+The demo account is not part of `db/seeds.rb` on purpose: seeds run automatically when a new database is created, which would give every install a demo login.
+
 ---
 
 # Local Development
@@ -1111,7 +1124,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Define integrity constraints.
 - [x] Test the schema in MySQL.
 - [x] Document the database design.
-- [ ] Add realistic sample data where it is useful for demos/testing.
+- [x] Add realistic sample data where it is useful for demos/testing.
 
 ## Development Environment and Setup
 
