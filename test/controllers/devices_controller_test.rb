@@ -102,6 +102,83 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "index shows a rename button for each device" do
+    sign_in_as users(:alice)
+
+    get devices_path
+
+    assert_select "a.rounded-lg[href='#{edit_device_path(devices(:alice_phone))}']", text: "Rename"
+    assert_select "a.rounded-lg[href='#{edit_device_path(devices(:alice_laptop))}']", text: "Rename"
+  end
+
+  test "edit requires login" do
+    get edit_device_path(devices(:alice_phone))
+    assert_redirected_to login_path
+  end
+
+  test "edit shows the current name" do
+    sign_in_as users(:alice)
+
+    get edit_device_path(devices(:alice_phone))
+
+    assert_response :success
+    assert_select "input[name='device[name]'][value=?]", "Alice Pixel"
+  end
+
+  test "update renames the device" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+
+    patch device_path(device), params: { device: { name: "Work Phone" } }
+
+    assert_redirected_to devices_path
+    assert_equal "Work Phone", device.reload.name
+    follow_redirect!
+    assert_match "Device renamed to Work Phone.", response.body
+  end
+
+  test "update ignores attempts to change the device type or owner" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+
+    patch device_path(device), params: { device: { name: "Work Phone", device_type: "laptop", user_id: users(:bob).id } }
+
+    device.reload
+    assert_equal "Work Phone", device.name
+    assert_equal "phone", device.device_type
+    assert_equal users(:alice), device.user
+  end
+
+  test "update rejects a blank name" do
+    sign_in_as users(:alice)
+
+    patch device_path(devices(:alice_phone)), params: { device: { name: "  " } }
+
+    assert_response :unprocessable_entity
+    assert_equal "Alice Pixel", devices(:alice_phone).reload.name
+  end
+
+  test "update rejects a name already used by another of the user's devices" do
+    sign_in_as users(:alice)
+
+    patch device_path(devices(:alice_phone)), params: { device: { name: "alice thinkpad" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "Alice Pixel", devices(:alice_phone).reload.name
+  end
+
+  test "edit and update 404 for another user's device" do
+    sign_in_as users(:alice)
+    device = devices(:bob_phone)
+
+    get edit_device_path(device)
+    assert_response :not_found
+
+    patch device_path(device), params: { device: { name: "Stolen" } }
+    assert_response :not_found
+    assert_equal "Bob iPhone", device.reload.name
+  end
+
   private
 
   def sign_in_as(user, password: "secret123")

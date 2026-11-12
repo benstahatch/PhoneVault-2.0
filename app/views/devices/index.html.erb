@@ -12,6 +12,8 @@
           <%= device.name %> <span class="font-normal text-neutral-600">(<%= device.device_type %>)</span>
         </span>
         <span class="flex flex-wrap gap-2">
+          <%= link_to "Rename", edit_device_path(device), class: button_classes(:secondary, size: :small),
+                aria: { label: "Rename #{device.name}" } %>
           <%= link_to "Backups", device_backup_runs_path(device), class: button_classes(:secondary, size: :small) %>
           <%= link_to "Upload", new_device_backup_run_path(device), class: button_classes(:primary, size: :small) %>
         </span>
