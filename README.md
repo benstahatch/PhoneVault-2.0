@@ -883,11 +883,48 @@ A future public deployment should use a proper production server/reverse proxy a
 
 ---
 
-# Manual Startup vs Automatic Startup
+# Deployment Method
 
-## Currently supported
+The supported way to run PhoneVault permanently is **Docker Compose through `launch.py`**, as in the [Docker quick start](#quick-start-run-everything-in-docker). Running Rails directly on the host is for development only.
 
-PhoneVault is currently started manually.
+## How it comes back after a reboot
+
+```text
+machine boots
+     |
+     v
+Docker starts (enabled at boot by the Docker install)
+     |
+     v
+MySQL container starts           restart: unless-stopped
+     |
+     v
+MySQL healthcheck passes
+     |
+     v
+Rails container starts           depends_on: db (service_healthy)
+     |
+     v
+PhoneVault is available on port 8080
+```
+
+| Piece | What handles it |
+| --- | --- |
+| Starting at boot | Docker's own service, plus `restart: unless-stopped` on both containers |
+| Waiting for the database | The MySQL healthcheck and `depends_on: condition: service_healthy` |
+| Secrets and settings | `.env`, created once by `launch.py` with random passwords |
+| Updating | `git pull`, then `python3 launch.py` (it rebuilds the image) |
+| Stopping on purpose | `python3 launch.py down`; containers stopped this way stay stopped after a reboot |
+
+This was verified with a full reboot of the Raspberry Pi server: PhoneVault came back on its own with the same accounts and backups, and was reachable from another laptop and a phone.
+
+**systemd** was evaluated and is not needed. Docker already starts at boot through its own systemd service, and the restart policies bring the containers back, so a separate PhoneVault unit would only duplicate that.
+
+**Not handled yet:** waiting for an external backup disk to mount. If the disk is missing at boot, PhoneVault starts anyway. See [Missing external disks](#missing-external-disks).
+
+## Development startup
+
+When working on the code, start the pieces by hand so logs stay visible:
 
 | Stage          | Command or action                               | Ready when                                           |
 | -------------- | ----------------------------------------------- | ---------------------------------------------------- |
@@ -895,43 +932,6 @@ PhoneVault is currently started manually.
 | Rails database | `bin/rails db:prepare`                          | The command completes without error                  |
 | Application    | `bin/rails server -b 127.0.0.1` or `-b 0.0.0.0` | Rails reports that it is listening on port `3000`    |
 | Browser        | Open the matching Linux/LAN/Tailscale address   | Login, device registration, upload, and restore work |
-
-Manual startup is useful during development because logs remain visible and services are easy to restart.
-
-For an always-on install, use `python3 launch.py` from the [Docker quick start](#quick-start-run-everything-in-docker). It starts MySQL, waits until it is ready, then starts Rails, and both containers restart automatically.
-
-## Planned permanent deployment
-
-A permanent PhoneVault server should eventually recover automatically after a reboot.
-
-```text
-machine boots
-     |
-     v
-backup disk mounts
-     |
-     v
-Docker / MySQL starts
-     |
-     v
-database becomes ready
-     |
-     v
-Rails starts
-     |
-     v
-PhoneVault becomes available
-```
-
-Possible approaches include:
-
-- Docker restart policies
-- Docker Compose startup
-- systemd
-
-The Docker quick start (`launch.py`) already covers part of this: Docker starts MySQL, Rails waits for the database healthcheck, and both containers restart after a reboot. Waiting for the backup disk to mount is not handled yet, and the final deployment method has not been chosen.
-
-The configured backup storage should be verified before PhoneVault begins accepting uploads.
 
 ---
 
@@ -1139,7 +1139,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Test setup from a completely fresh Linux clone.
 - [x] Test setup on another Linux machine.
 - [x] Fix any README commands that fail during a fresh setup.
-- [ ] Finalize the supported permanent deployment method.
+- [x] Finalize the supported permanent deployment method.
 
 ## Authentication and Security
 
@@ -1248,16 +1248,16 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Verify PhoneVault through Tailscale.
 - [x] Keep MySQL bound locally rather than exposing it directly to the public internet.
 - [ ] Validate the full documented procedure on a clean Linux installation.
-- [ ] Decide on the permanent deployment method.
+- [x] Decide on the permanent deployment method.
 - [x] Add automatic startup after Linux reboot.
 - [x] Verify MySQL readiness before Rails depends on it.
 - [ ] Verify the configured backup disk is mounted before uploads are accepted.
 - [x] Evaluate Docker restart policies.
-- [ ] Evaluate systemd where appropriate.
+- [x] Evaluate systemd where appropriate (not needed; Docker restart policies cover it).
 - [x] Test a full reboot and confirm PhoneVault returns with the correct storage.
 - [x] Test access from another laptop.
 - [x] Test browser access from a phone.
-- [ ] Keep Tailscale optional.
+- [x] Keep Tailscale optional.
 
 ## Disaster Recovery
 
@@ -1279,7 +1279,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Document troubleshooting.
 - [ ] Verify every setup command on a fresh Linux machine.
 - [ ] Continue cleaning old development files/scripts.
-- [ ] Document the final production deployment method when it is chosen.
+- [x] Document the final production deployment method.
 
 ## V3 — Background Jobs
 
