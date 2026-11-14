@@ -1,26 +1,25 @@
-<h1>Back Up a File — <%= @device.name %></h1>
+<h1 class="mb-6 text-3xl sm:text-4xl font-bold text-neutral-900">Back Up a File <span class="font-normal text-neutral-600">— <%= @device.name %></span></h1>
 
-<% if @backup_run&.errors&.any? %>
-  <div>
-    <ul>
-      <% @backup_run.errors.full_messages.each do |message| %>
-        <li><%= message %></li>
-      <% end %>
-    </ul>
-  </div>
-<% end %>
+<div class="box-border max-w-lg rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
+  <% if @backup_run&.errors&.any? %>
+    <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      <ul class="m-0 pl-5">
+        <% @backup_run.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
 
-<%= form_with model: [@device, @backup_run] do |form| %>
-  <div>
-    <%= form.label :file %>
-    <%= form.file_field :file, required: true %>
-  </div>
+  <%= form_with model: [@device, @backup_run] do |form| %>
+    <div class="mb-6">
+      <%= form.label :file, class: label_classes %>
+      <%= form.file_field :file, required: true, class: file_field_classes %>
+    </div>
 
-  <div>
-    <%= form.submit "Upload" %>
-  </div>
-<% end %>
-
-<hr>
-
-<%= link_to "Back to backups", device_backup_runs_path(@device) %>
+    <div class="flex flex-wrap gap-3">
+      <%= form.submit "Upload", class: "#{button_classes} cursor-pointer" %>
+      <%= link_to "Back to backups", device_backup_runs_path(@device), class: button_classes(:secondary) %>
+    </div>
+  <% end %>
+</div>

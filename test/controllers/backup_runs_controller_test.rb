@@ -106,6 +106,19 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     assert_match "No backups yet. Upload a file to create your first backup.", response.body
   end
 
+  test "history and upload pages use styled buttons" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+
+    get device_backup_runs_path(device)
+    assert_select "a.rounded-lg[href='#{new_device_backup_run_path(device)}']", text: "Upload a file"
+    assert_select "a.rounded-lg[href='#{devices_path}']", text: "Back to your devices"
+
+    get new_device_backup_run_path(device)
+    assert_select "input[type=submit][value='Upload'].rounded-lg"
+    assert_select "a.rounded-lg[href='#{device_backup_runs_path(device)}']", text: "Back to backups"
+  end
+
   test "index requires login" do
     get device_backup_runs_path(devices(:alice_phone))
     assert_redirected_to login_path
