@@ -199,7 +199,7 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
   end
 
 
-  test "create marks the backup run failed when storage fails" do
+  test "create rejects an unavailable save directory before starting a run" do
   sign_in_as users(:alice)
 
   device = devices(:alice_phone)
@@ -213,21 +213,15 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     ENV["PHONEVAULT_BACKUP_ROOT"] = blocked_path
 
     begin
-      assert_difference([ "BackupRun.count", "SecurityEvent.count" ], 1) do
+      assert_no_difference([ "BackupRun.count", "SecurityEvent.count" ]) do
         assert_no_difference("BackupFile.count") do
           post device_backup_runs_path(device),
             params: { backup_run: { file: file } }
         end
       end
 
-      run = device.backup_runs.order(:created_at).last
-
-      assert run.failed?
-      assert_redirected_to device_backup_runs_path(device)
-
-      event = SecurityEvent.order(:id).last
-      assert_equal "BACKUP_FAILED", event.event_type
-      assert_equal users(:alice), event.user
+      assert_response :unprocessable_entity
+      assert_match "Backup storage is unavailable", response.body
     ensure
       if previous_root
         ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root

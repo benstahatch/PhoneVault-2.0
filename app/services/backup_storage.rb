@@ -21,6 +21,15 @@ class BackupStorage
   UUID_PATTERN =
     /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
 
+  def self.for_run(run)
+    return new if run.backup_subdirectory.blank?
+
+    # Saved relative to the global root so remounting storage preserves paths.
+    directory = BackupDirectory.for_user(run.device.user)
+    path = directory.resolve!(default_root.realpath.join(run.backup_subdirectory).to_s)
+    new(root: path)
+  end
+
   def self.default_root
     configured_root = ENV["PHONEVAULT_BACKUP_ROOT"]
 

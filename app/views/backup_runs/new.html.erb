@@ -1,5 +1,9 @@
 <h1 class="mb-6 text-3xl sm:text-4xl font-bold text-neutral-900">Back Up a File <span class="font-normal text-neutral-600">— <%= @device.name %></span></h1>
 
+<% if flash[:alert] %>
+  <p role="alert"><%= flash[:alert] %></p>
+<% end %>
+
 <div class="box-border max-w-lg rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
   <% if @backup_run&.errors&.any? %>
     <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -15,6 +19,33 @@
     <div class="mb-6">
       <%= form.label :file, class: label_classes %>
       <%= form.file_field :file, required: true, class: file_field_classes %>
+    </div>
+
+    <div class="mb-6" data-controller="backup-path"
+      data-backup-path-browse-url-value="<%= directories_device_backup_location_path(@device) %>"
+      data-backup-path-test-url-value="<%= validate_path_device_backup_location_path(@device) %>">
+      <%= label_tag "backup_run_save_path", "Save path", class: label_classes %>
+      <%= text_field_tag "backup_run[save_path]", @save_path,
+        id: "backup_run_save_path", required: true, spellcheck: false,
+        class: field_classes, aria: { describedby: "save-path-help save-path-result" },
+        data: { backup_path_target: "input", action: "input->backup-path#clear" } %>
+      <p id="save-path-help" class="mt-2 text-sm text-neutral-600">Absolute path on the PhoneVault server. In Docker, use the container path. Choose an existing folder inside your account’s storage.</p>
+      <div class="flex flex-wrap gap-3 mt-3">
+        <%= link_to "Browse folders", directories_device_backup_location_path(@device), data: { action: "backup-path#browse" }, class: button_classes(:secondary, size: :small) %>
+        <button type="button" class="<%= button_classes(:secondary, size: :small) %>"
+          data-action="backup-path#test" data-backup-path-target="button">Test path</button>
+      </div>
+      <dialog data-backup-path-target="dialog" class="rounded-xl border border-neutral-200 p-6 w-full max-w-lg" aria-labelledby="folder-dialog-title">
+        <h2 id="folder-dialog-title" class="text-xl font-bold">Choose a save folder</h2>
+        <p data-backup-path-target="current" class="break-all my-3"></p>
+        <p data-backup-path-target="browseResult" role="status"></p>
+        <div data-backup-path-target="folders" class="space-y-3 my-4"></div>
+        <div class="flex flex-wrap gap-3">
+          <button type="button" data-action="backup-path#choose" data-backup-path-target="chooseButton" class="<%= button_classes %>">Use this folder</button>
+          <button type="button" data-action="backup-path#close" class="<%= button_classes(:secondary) %>">Cancel</button>
+        </div>
+      </dialog>
+      <p id="save-path-result" role="status" aria-live="polite" data-backup-path-target="result"></p>
     </div>
 
     <div class="flex flex-wrap gap-3">

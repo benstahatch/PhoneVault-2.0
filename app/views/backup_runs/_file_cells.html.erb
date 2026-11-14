@@ -1,5 +1,8 @@
 <td class="backup-file-details">
   <strong><%= file.original_filename %></strong>
+  <% if run.backup_subdirectory.present? %>
+    <p class="text-sm break-all">Save folder: <code><%= BackupStorage.default_root.join(run.backup_subdirectory) %></code></p>
+  <% end %>
   <details>
     <summary>SHA-256 details</summary>
     <p>Recorded when uploaded; file size and hash are checked again when restored.</p>

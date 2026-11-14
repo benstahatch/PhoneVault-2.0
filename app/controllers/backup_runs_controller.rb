@@ -7,21 +7,41 @@ class BackupRunsController < ApplicationController
 
   def new
     @backup_run = @device.backup_runs.new
+    begin
+      browser = BackupDirectory.for_user(current_user)
+      @save_path = browser.resolve!(params[:save_path].presence || browser.root.to_s).to_s
+    rescue BackupDirectory::Error => error
+      @backup_run.errors.add(:base, error.message)
+    end
   end
 
   def create
-    uploaded_file = params.expect(backup_run: [ :file ])[:file]
+    attributes = params.expect(backup_run: [ :file, :save_path ])
+    uploaded_file = attributes[:file]
+    @save_path = attributes[:save_path]
     if uploaded_file.blank?
       @backup_run = @device.backup_runs.new
       @backup_run.errors.add(:base, "Choose a file to upload")
       return render :new, status: :unprocessable_entity
     end
 
-    @backup_run = @device.backup_runs.create!(status: :pending)
+    begin
+      browser = BackupDirectory.for_user(current_user)
+      # Older clients can omit the new field; an explicitly blank path is invalid.
+      @save_path = browser.root.to_s unless attributes.key?(:save_path)
+      destination = browser.test_write!(@save_path)
+      relative = destination.relative_path_from(BackupStorage.default_root.realpath).to_s
+    rescue BackupDirectory::Error => error
+      @backup_run = @device.backup_runs.new
+      @backup_run.errors.add(:base, error.message)
+      return render :new, status: :unprocessable_entity
+    end
+
+    @backup_run = @device.backup_runs.create!(status: :pending, backup_subdirectory: relative)
     @backup_run.start!
 
     begin
-      storage = BackupStorage.new
+      storage = BackupStorage.for_run(@backup_run)
       storage.store(uploaded_file, backup_run: @backup_run, original_filename: uploaded_file.original_filename)
       @backup_run.complete!
     rescue StandardError => error

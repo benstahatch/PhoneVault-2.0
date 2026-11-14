@@ -8,6 +8,10 @@ Rails.application.routes.draw do
 
 
 resources :devices, only: %i[index new create edit update] do
+  resource :backup_location, only: [] do
+    get :directories
+    post :validate_path
+  end
   resources :backup_runs, only: %i[index new create] do
   resources :backup_files, only: [] do
     member do

@@ -1352,3 +1352,36 @@ restore
 
 More advanced infrastructure should add capability without making the beginner setup unnecessarily complicated.
 
+
+## Choosing a save folder for an upload
+
+The upload form accepts an absolute server-side **Save path**. **Browse folders**
+opens the actual directory tree without clearing your selected file, and
+**Test path** checks that the directory exists and can be written to. Uploads
+repeat that check on the server. Choose an existing folder; create additional
+folders on the server with permissions allowing the Rails process to write.
+
+New uploads are restricted to the signed-in account's directory:
+`<PHONEVAULT_BACKUP_ROOT>/users/<user ID>/`. The app creates this account directory
+automatically. Other accounts' directories, parent traversal, and symbolic-link
+folders are not accepted. Server administrators should keep these directories
+owned by the Rails user and prevent untrusted local processes from modifying them.
+
+With Docker, the existing Compose mount maps the host's configured backup folder
+to `/rails/storage/backups`. For example, with host
+`PHONEVAULT_BACKUP_ROOT=/mnt/phonevault-backups`, account 42 can select
+`/rails/storage/backups/users/42/photos` after the administrator creates
+`/mnt/phonevault-backups/users/42/photos` on the host (writable by UID 1000).
+The field uses the **container path**, not the host path or your browser's download
+folder. Additional disks must be mounted into the permitted storage tree.
+
+Each backup run records its selected directory relative to the storage root.
+Files retain the existing `<run ID>/<UUID>` layout underneath that directory;
+original filenames are retained in the database and used for downloads. Restore
+uses the recorded directory even after a later upload selects somewhere else.
+Existing backups with an empty directory value continue restoring from the
+original root. Changing the configured root requires keeping the same relative
+folder structure and moving or mounting the stored data there.
+
+After updating the application, run `bin/rails db:migrate` in its normal runtime
+before using the new form. No existing backup files are moved by the migration.
