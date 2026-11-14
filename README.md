@@ -219,6 +219,8 @@ Events are recorded automatically with the user (when known) and the request's I
 
 The subject has no foreign key on purpose. A security log should keep every row, so deleting a device or file never deletes or blocks its events. The `subject_type`/`subject_id` pair still records what it pointed at. Details are written when the event happens, so a later rename doesn't change what an old event says. Login details never include what was typed, because people sometimes type a password into the username field.
 
+Each user can see their own events on the **Activity** page (`/activity`, linked in the header): the latest 100, newest first, in plain words with their details and IP address. Failed sign-ins, failed backups, and failed restores are highlighted in red. Events with no user, such as failed logins for usernames that don't exist, aren't shown to anyone.
+
 Not recorded yet:
 
 - `AUTHORIZATION_DENIED`: requests for another user's records already return 404, but are not logged. Rails cannot tell those apart from IDs that simply don't exist without an extra lookup.
