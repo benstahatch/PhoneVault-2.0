@@ -7,6 +7,12 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='session[username]'][autocapitalize='none'][autocorrect='off'][spellcheck='false']"
   end
 
+  test "login page links to signup with a styled button" do
+    get login_path
+
+    assert_select "a.rounded-lg[href='#{signup_path}']", text: "Create your account"
+  end
+
   test "successful login records LOGIN_SUCCESS for the user" do
     assert_difference("SecurityEvent.count", 1) do
       log_in "alice", "secret123"
