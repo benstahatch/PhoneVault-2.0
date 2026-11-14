@@ -208,6 +208,7 @@ Events are recorded automatically with the user (when known) and the request's I
 | `LOGOUT` | A user logs out. |
 | `ACCOUNT_CREATED` | A new account is created through signup. |
 | `DEVICE_REGISTERED` | A device is saved successfully. |
+| `DEVICE_RENAMED` | A user changes the name of one of their devices. |
 | `BACKUP_SUCCESS` | An uploaded file is stored and its backup run is marked completed. |
 | `BACKUP_FAILED` | Storing an uploaded file fails (including uploads over the size limit) and its backup run is marked failed. |
 | `FILE_RESTORED` | A file passes its size and SHA-256 checks and is sent for download. |
@@ -1169,7 +1170,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Associate devices with users.
 - [x] Display registered devices.
 - [x] Add navigation to device backups and uploads.
-- [ ] Allow devices to be renamed.
+- [x] Allow devices to be renamed.
 - [ ] Eventually expose device/client API credentials if automatic clients are added.
 
 ## Backup System

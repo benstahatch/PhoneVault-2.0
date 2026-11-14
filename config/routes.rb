@@ -7,7 +7,7 @@ Rails.application.routes.draw do
   delete "logout", to: "sessions#destroy", as: :logout
 
 
-resources :devices, only: %i[index new create] do
+resources :devices, only: %i[index new create edit update] do
   resources :backup_runs, only: %i[index new create] do
   resources :backup_files, only: [] do
     member do
