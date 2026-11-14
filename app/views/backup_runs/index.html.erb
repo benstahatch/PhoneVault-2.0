@@ -1,8 +1,8 @@
 <% if flash[:notice] %>
-  <p role="status"><%= flash[:notice] %></p>
+  <p role="status" class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800"><%= flash[:notice] %></p>
 <% end %>
 <% if flash[:alert] %>
-  <p role="alert"><%= flash[:alert] %></p>
+  <p role="alert" class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800"><%= flash[:alert] %></p>
 <% end %>
 
 <h1 class="mb-6 text-3xl sm:text-4xl font-bold text-neutral-900"><%= @device.name %> <span class="font-normal text-neutral-600">— Backups</span></h1>

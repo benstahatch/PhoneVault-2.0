@@ -165,6 +165,8 @@ Current schema fields:
 
 - `id` _(PK)_
 - `device_id` _(FK -> devices.id)_
+- `storage_root` _(saved absolute destination)_
+- `backup_subdirectory` _(legacy relative destination)_
 - `status`
 - `started_at`
 - `completed_at`
@@ -287,7 +289,7 @@ Save metadata in MySQL
 Mark Backup Complete
 ```
 
-PhoneVault does not use the uploaded filename as the real filesystem path. The original filename is stored as metadata while the file on disk uses a generated UUID.
+PhoneVault stores new files under a readable device folder using a sanitized original filename, such as `Benji-Backups/photo.jpeg`. Duplicate names receive numbered suffixes; existing UUID-named backups remain supported.
 
 ## Upload size limit
 
@@ -940,7 +942,7 @@ When working on the code, start the pieces by hand so logs stay visible:
 | Data                               | Current location                               | What must be preserved                                  |
 | ---------------------------------- | ---------------------------------------------- | ------------------------------------------------------- |
 | Accounts, devices, backup metadata | MySQL Docker volume                            | A consistent MySQL backup                               |
-| Uploaded backup bytes              | `storage/backups/` or `PHONEVAULT_BACKUP_ROOT` | The complete backup directory tree                      |
+| Uploaded backup bytes              | Default storage root and any selected save folders | Every backup directory tree used by the app |
 | Local configuration                | `.env`                                         | A secure copy of configuration and database credentials |
 
 A usable server recovery needs both:
@@ -1183,7 +1185,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Record file sizes.
 - [x] Associate backup files with backup runs.
 - [x] Track successful and failed backup runs.
-- [x] Use server-generated UUID storage filenames.
+- [x] Use readable device folders and safe filenames, with legacy UUID support.
 - [x] Use partial files before publishing a completed backup.
 - [x] Prevent existing completed backup files from being overwritten.
 - [x] Verify the complete backup workflow from a fresh Linux installation.
@@ -1352,3 +1354,21 @@ restore
 
 More advanced infrastructure should add capability without making the beginner setup unnecessarily complicated.
 
+## Choosing a save folder for an upload
+
+**Save path** accepts any existing server folder writable by PhoneVault.
+**Browse folders** selects a directory without clearing the chosen file;
+**Test path** checks write access. Successful uploads show a green confirmation.
+
+New backups use readable paths such as `Benji-Backups/photo.jpeg` inside the
+selected folder. Duplicate filenames receive numbered suffixes, such as
+`photo (2).jpeg`, without overwriting earlier backups. Unsafe characters are
+sanitized. Existing numbered folders and UUID filenames remain restorable.
+
+Each backup remembers its destination. Keep that path available when moving the
+server. In Docker, select a mounted container path (the default is
+`/rails/storage/backups`); additional host folders need a volume mount and write
+permissions for UID 1000. Restore downloads use your browser's download settings.
+
+Run `bin/rails db:migrate` in the app's runtime after updating. Existing backup
+files are not moved.

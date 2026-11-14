@@ -19,7 +19,7 @@ class BackupPreview
 
   Excerpt = Struct.new(:text, :truncated, keyword_init: true)
 
-  def initialize(storage: BackupStorage.new)
+  def initialize(storage: nil)
     @storage = storage
   end
 
@@ -63,11 +63,12 @@ class BackupPreview
 
   # reads the start of the stored file; nil when it is missing or its path is unsafe
   def read_start(backup_file, bytes)
-    path = @storage.path_for(backup_file)
+    storage = @storage || BackupStorage.for_run(backup_file.backup_run)
+    path = storage.path_for(backup_file)
     return nil unless path.file?
 
     File.open(path, "rb") { |file| file.read(bytes) || "".b }
-  rescue BackupStorage::Error, SystemCallError
+  rescue BackupStorage::Error, BackupDirectory::Error, SystemCallError
     nil
   end
 end

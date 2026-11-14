@@ -8,21 +8,39 @@ class BackupRunsController < ApplicationController
 
   def new
     @backup_run = @device.backup_runs.new
+    begin
+      initial_path = params[:save_path].presence || BackupDirectory.for_user(current_user).root.to_s
+      @save_path = BackupDirectory.server.resolve!(initial_path).to_s
+    rescue BackupDirectory::Error => error
+      @backup_run.errors.add(:base, error.message)
+    end
   end
 
   def create
-    uploaded_file = params.expect(backup_run: [ :file ])[:file]
+    attributes = params.expect(backup_run: [ :file, :save_path ])
+    uploaded_file = attributes[:file]
+    @save_path = attributes[:save_path]
     if uploaded_file.blank?
       @backup_run = @device.backup_runs.new
       @backup_run.errors.add(:base, "Choose a file to upload")
       return render :new, status: :unprocessable_entity
     end
 
-    @backup_run = @device.backup_runs.create!(status: :pending)
+    begin
+      # Older clients can omit the new field; an explicitly blank path is invalid.
+      @save_path = BackupDirectory.for_user(current_user).root.to_s unless attributes.key?(:save_path)
+      destination = BackupDirectory.server.test_write!(@save_path)
+    rescue BackupDirectory::Error => error
+      @backup_run = @device.backup_runs.new
+      @backup_run.errors.add(:base, error.message)
+      return render :new, status: :unprocessable_entity
+    end
+
+    @backup_run = @device.backup_runs.create!(status: :pending, storage_root: destination.to_s)
     @backup_run.start!
 
     begin
-      storage = BackupStorage.new
+      storage = BackupStorage.for_run(@backup_run)
       storage.store(uploaded_file, backup_run: @backup_run, original_filename: uploaded_file.original_filename)
       @backup_run.complete!
     rescue StandardError => error
@@ -42,7 +60,7 @@ class BackupRunsController < ApplicationController
 
     # recorded outside begin/rescue so a logging error can't mark a stored backup as failed
     record_security_event("BACKUP_SUCCESS", current_user)
-    redirect_to device_backup_runs_path(@device), notice: "Backup completed."
+    redirect_to device_backup_runs_path(@device), notice: "File uploaded successfully. Backup completed."
   end
 
   private
