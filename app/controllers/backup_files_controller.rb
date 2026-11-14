@@ -23,6 +23,22 @@ def restore
     filename: safe_filename,
     disposition: "attachment"
 end
+
+  # shows an image thumbnail in the backup history; only real images are served
+  def preview
+    content_type = BackupPreview.new.image_type(@backup_file)
+    return head :not_found unless content_type
+
+    # nothing in this response may run scripts, even if a browser misreads it
+    response.headers["Content-Security-Policy"] = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'"
+    response.headers["Cache-Control"] = "private, max-age=3600"
+
+    # path_for keeps the path inside the backup folder, just like restore
+    path = BackupStorage.new.path_for(@backup_file)
+
+    send_file path.to_s, type: content_type, disposition: "inline"
+  end
+
   private
 
   def set_device
