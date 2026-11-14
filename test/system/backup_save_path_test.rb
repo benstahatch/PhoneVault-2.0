@@ -46,6 +46,7 @@ class BackupSavePathTest < ActionDispatch::SystemTestCase
     assert_text "sample_backup.txt"
     assert_text "Save folder:"
     file = devices(:alice_phone).backup_runs.order(:id).last.backup_files.sole
+    assert_equal "Alice-Pixel-Backups/sample_backup.txt", file.storage_path
     assert @folder.join(file.storage_path).file?
   end
 end

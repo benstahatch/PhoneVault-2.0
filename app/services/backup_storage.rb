@@ -5,9 +5,9 @@ require "securerandom"
 # Writes backup file contents to disk, records their metadata, and checks
 # them against their SHA-256 on the way back out.
 #
-# storage_path is saved relative to the root and follows the format
-# backup_run_id/uuid. The uploaded filename only ever lives in the database,
-# so a name like "../../etc/passwd" can't choose where a file is written.
+# New paths use Device-Backups/original-filename with safe path components.
+# Existing run_id/UUID paths remain readable. Atomic publication never replaces
+# an existing file; repeated names receive a numbered suffix.
 class BackupStorage
   class Error < StandardError; end
   class MissingFile < Error; end
@@ -85,11 +85,10 @@ class BackupStorage
     end
 
     # verify the backup run directory before writing anything to disk
-    run_directory = secure_run_directory(backup_run)
-
-    storage_path = File.join(backup_run.id.to_s, uuid)
-    final_path = run_directory.join(uuid)
-    temp_path = Pathname("#{final_path}.partial")
+    folder = "#{safe_component(backup_run.device.name, limit: 80).gsub(/\s+/, "-")}-Backups"
+    run_directory = secure_directory(folder)
+    filename = safe_component(original_filename, limit: 140)
+    temp_path = run_directory.join(".#{uuid}.partial")
 
     temp_created = false
     final_created = false
@@ -117,8 +116,9 @@ class BackupStorage
     end
 
     # publish the completed file without overwriting an existing destination
-    File.link(temp_path, final_path)
+    final_path = publish_without_overwriting(temp_path, run_directory, filename)
     final_created = true
+    storage_path = File.join(folder, final_path.basename.to_s)
 
     File.unlink(temp_path)
     temp_created = false
@@ -164,10 +164,11 @@ class BackupStorage
     storage_path = backup_file.storage_path.to_s
     parts = storage_path.split("/", -1)
 
-    valid_storage_path =
-      parts.length == 2 &&
-      parts.first == backup_file.backup_run_id.to_s &&
-      parts.last.match?(UUID_PATTERN)
+    legacy_path = parts.length == 2 &&
+      parts.first == backup_file.backup_run_id.to_s && parts.last.match?(UUID_PATTERN)
+    readable_path = parts.length == 2 && parts.first.end_with?("-Backups") &&
+      parts.all? { |part| safe_path_component?(part) }
+    valid_storage_path = legacy_path || readable_path
 
     unless valid_storage_path
       raise Error, "invalid storage path for backup file #{backup_file.id}"
@@ -176,7 +177,7 @@ class BackupStorage
     path = root.join(storage_path).expand_path
 
     # reject normal path traversal before touching the filesystem
-    unless path.to_s.start_with?("#{root}#{File::SEPARATOR}")
+    unless root == Pathname("/") || path.to_s.start_with?("#{root}#{File::SEPARATOR}")
       raise Error, "storage path for backup file #{backup_file.id} is outside the storage root"
     end
 
@@ -187,7 +188,7 @@ class BackupStorage
     real_path = path.realpath
 
     # reject symlinks that resolve outside the real backup directory
-    unless real_path.to_s.start_with?("#{real_root}#{File::SEPARATOR}")
+    unless real_root == Pathname("/") || real_path.to_s.start_with?("#{real_root}#{File::SEPARATOR}")
       raise Error, "resolved storage path for backup file #{backup_file.id} is outside the storage root"
     end
 
@@ -196,31 +197,46 @@ class BackupStorage
 
   private
 
-  # creates the backup run directory and rejects symlinks outside storage
-  def secure_run_directory(backup_run)
+  def safe_component(value, limit:)
+    name = ActiveStorage::Filename.new(value.to_s).sanitized
+      .gsub(/[[:cntrl:]]/, "_").gsub("..", "_")
+    name = name.byteslice(0, limit).to_s.scrub("").strip
+    name = "file" if name.blank? || name == "."
+    name
+  end
+
+  def safe_path_component?(part)
+    part.present? && part != "." && !part.include?("..") &&
+      !part.match?(/[\\\/[:cntrl:]]/)
+  end
+
+  def publish_without_overwriting(temp_path, directory, filename)
+    extension = File.extname(filename)
+    stem = filename.delete_suffix(extension)
+    10_000.times do |index|
+      name = index.zero? ? filename : "#{stem} (#{index + 1})#{extension}"
+      destination = directory.join(name)
+      begin
+        File.link(temp_path, destination)
+        return destination
+      rescue Errno::EEXIST
+        # Atomic link protects existing files, including concurrent uploads.
+      end
+    end
+    raise Error, "Too many backups with this filename in the selected folder"
+  end
+
+  # Only a direct child of the selected root can be used as a device folder.
+  def secure_directory(folder)
     FileUtils.mkdir_p(root, mode: 0o700)
     real_root = root.realpath
-
-    run_directory = root.join(backup_run.id.to_s)
-
-    # never trust an existing symlink as a backup directory
-    if run_directory.symlink?
-      raise Error, "backup run directory #{backup_run.id} cannot be a symlink"
+    directory = real_root.join(folder)
+    raise Error, "Backup directory cannot be a symlink" if directory.symlink?
+    FileUtils.mkdir_p(directory, mode: 0o700)
+    raise Error, "Backup directory cannot be a symlink" if directory.symlink?
+    unless directory.realpath.parent == real_root
+      raise Error, "Backup directory is outside the storage root"
     end
-
-    FileUtils.mkdir_p(run_directory, mode: 0o700)
-
-    # check again after creation before any backup bytes are written
-    if run_directory.symlink?
-      raise Error, "backup run directory #{backup_run.id} cannot be a symlink"
-    end
-
-    real_run_directory = run_directory.realpath
-
-    unless real_run_directory.parent == real_root
-      raise Error, "backup run directory #{backup_run.id} is outside the storage root"
-    end
-
-    run_directory
+    directory
   end
 end

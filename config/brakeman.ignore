@@ -21,7 +21,7 @@
       "cwe_id": [
         22
       ],
-      "note": "False positive: device, run, and file are scoped through current_user. New upload destinations are intentionally any writable server directory and are stored canonically in storage_root; this field is never accepted directly from request mass assignment. Restore uses that recorded directory and validates the internal run_id/UUID path, lexical and realpath containment beneath the recorded destination, file size, and SHA-256 before send_file. Legacy relative destinations retain account-root validation. Covered by storage, controller, and external-destination restore tests."
+      "note": "False positive: device, run, and file are scoped through current_user. New upload destinations are intentionally any writable server directory and are stored canonically in storage_root; this field is never accepted directly from request mass assignment. Restore uses that recorded directory and validates the recorded readable device-folder/filename or legacy run_id/UUID path, lexical and realpath containment beneath the recorded destination, file size, and SHA-256 before send_file. Legacy relative destinations retain account-root validation. Covered by storage, controller, and external-destination restore tests."
     }
   ],
   "brakeman_version": "8.1.0"

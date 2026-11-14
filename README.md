@@ -1375,9 +1375,12 @@ and select its container path. For example, mount `/home/boomac/Downloads` at
 by the container's Rails user (UID 1000). Browser download destinations are separate:
 Restore downloads use your browser's download settings or Save As dialog.
 
-Each new backup run records the absolute, canonical destination. Files retain the
-existing `<run ID>/<UUID>` layout underneath that directory; original filenames
-are retained in the database and used for downloads. Restore uses that recorded
+Each new backup run records the absolute, canonical destination. New files use a readable device folder and original filename, such as
+`Benji-Backups/photo.jpeg`. Duplicate names become `photo (2).jpeg`,
+`photo (3).jpeg`, and so on without overwriting previous backups. Unsafe path
+characters are sanitized and exceptionally long names are shortened. Original
+filenames are retained in the database and used for downloads. Existing numeric
+folders and UUID filenames continue to restore without being moved. Restore uses that recorded
 location even after another upload chooses a different directory or the configured
 default changes. Keep that absolute path available when moving the server.
 Previously saved relative destinations and original-root backups remain supported.
