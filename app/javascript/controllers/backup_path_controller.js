@@ -12,7 +12,7 @@ export default class extends Controller {
   browse(event) {
     event.preventDefault()
     this.dialogTarget.showModal()
-    this.loadFolders()
+    this.loadFolders(this.inputTarget.value)
   }
 
   close() {
@@ -60,6 +60,7 @@ export default class extends Controller {
   clear() {
     this.request?.abort()
     this.resultTarget.textContent = ""
+    this.resultTarget.className = ""
     this.buttonTarget.disabled = false
   }
 
@@ -68,6 +69,7 @@ export default class extends Controller {
     const request = new AbortController()
     this.request = request
     this.buttonTarget.disabled = true
+    this.resultTarget.className = ""
     this.resultTarget.textContent = "Checking directory…"
     try {
       const response = await fetch(this.testUrlValue, {
@@ -81,6 +83,7 @@ export default class extends Controller {
         body: JSON.stringify({ path: this.inputTarget.value })
       })
       const data = await response.json()
+      this.resultTarget.className = response.ok ? "mt-3 rounded-lg bg-green-50 p-3 text-green-800" : "mt-3 rounded-lg bg-red-50 p-3 text-red-800"
       this.resultTarget.textContent = response.ok ? data.message : (data.error || "Unable to check this directory.")
     } catch (error) {
       if (error.name !== "AbortError") this.resultTarget.textContent = "Unable to check this directory. Refresh the page and try again."

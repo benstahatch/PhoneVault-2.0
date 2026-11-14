@@ -8,7 +8,8 @@ class BackupSavePathTest < ActionDispatch::SystemTestCase
     @previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
     ENV["PHONEVAULT_BACKUP_ROOT"] = @temporary
     @root = BackupDirectory.for_user(users(:alice)).root
-    @folder = @root.join("Family photos")
+    @external = Dir.mktmpdir("phonevault_downloads_browser")
+    @folder = Pathname(@external).realpath.join("Family photos")
     @folder.mkdir
     Rails.cache.clear
   end
@@ -16,6 +17,7 @@ class BackupSavePathTest < ActionDispatch::SystemTestCase
   teardown do
     @previous_root ? ENV["PHONEVAULT_BACKUP_ROOT"] = @previous_root : ENV.delete("PHONEVAULT_BACKUP_ROOT")
     FileUtils.remove_entry(@temporary)
+    FileUtils.remove_entry(@external)
   end
 
   test "browse preserves file selection and uploads into the tested directory" do
@@ -28,6 +30,7 @@ class BackupSavePathTest < ActionDispatch::SystemTestCase
     upload_path = File.join(@temporary, "sample_backup.txt")
     FileUtils.cp(file_fixture("sample_backup.txt"), upload_path)
     attach_file "File", upload_path
+    fill_in "Save path", with: Pathname(@external).realpath.to_s
     click_on "Browse folders"
     within "dialog[open]" do
       click_on "Family photos"
@@ -39,7 +42,7 @@ class BackupSavePathTest < ActionDispatch::SystemTestCase
     click_on "Test path"
     assert_text "Directory exists and is writable."
     click_on "Upload"
-    assert_text "Backup completed.", wait: 10
+    assert_selector "[role=status].bg-green-50.text-green-800", text: "File uploaded successfully.", wait: 10
     assert_text "sample_backup.txt"
     assert_text "Save folder:"
     file = devices(:alice_phone).backup_runs.order(:id).last.backup_files.sole

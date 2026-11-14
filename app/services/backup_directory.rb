@@ -1,12 +1,16 @@
 require "fileutils"
 require "tempfile"
 
-# Browser paths are server paths. Each account gets a private directory under
-# the configured root; existing backups at the root remain restorable.
+# Browser paths are server paths. New destinations may be any existing server
+# directory. Restricted roots remain available for legacy relative locations.
 class BackupDirectory
   class Error < StandardError; end
 
   attr_reader :root
+
+  def self.server
+    new(root: "/")
+  end
 
   def self.for_user(user)
     base = BackupStorage.default_root
@@ -37,6 +41,13 @@ class BackupDirectory
       raise Error, "Enter an absolute Linux path without parent-directory traversal."
     end
     path = path.cleanpath
+    # Resolve aliases to their canonical destination before persisting it.
+    if root == Pathname("/")
+      resolved = path.realpath
+      raise Error, "Choose a directory." unless resolved.directory?
+      return resolved
+    end
+
     unless path == root || path.to_s.start_with?("#{root}/")
       raise Error, "Choose a folder inside your backup storage."
     end
@@ -58,6 +69,10 @@ class BackupDirectory
     raise Error, "Directory does not exist."
   rescue Errno::EACCES
     raise Error, "Directory is not accessible."
+  rescue Errno::ELOOP
+    raise Error, "Directory contains a symbolic-link loop."
+  rescue Errno::ENAMETOOLONG
+    raise Error, "Directory path is too long."
   rescue ArgumentError
     raise Error, "Invalid directory path."
   end

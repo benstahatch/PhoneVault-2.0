@@ -33,20 +33,20 @@ class BackupLocationsControllerTest < ActionDispatch::IntegrationTest
     get directories_device_backup_location_path(@device)
     assert_response :success
     assert_select "a", text: "Photos 2026"
-    assert_select "a", text: "Up", count: 0
+    assert_select "a", text: "Up", count: 1
     get directories_device_backup_location_path(@device), params: { path: @folder.to_s }
     assert_select "a", text: "Up", count: 1
     get new_device_backup_run_path(@device), params: { save_path: @folder.to_s }
     assert_select "input[name='backup_run[save_path]'][value=?]", @folder.to_s
   end
 
-  test "test path reports writable and invalid folders without leaking other accounts" do
+  test "test path reports writable and missing folders" do
     sign_in
     post validate_path_device_backup_location_path(@device), params: { path: @folder.to_s }, as: :json
     assert_response :success
     assert_equal "Directory exists and is writable.", response.parsed_body["message"]
     assert_empty @folder.children
-    other = BackupDirectory.for_user(users(:bob)).root
+    other = @root.join("missing")
     post validate_path_device_backup_location_path(@device), params: { path: other.to_s }, as: :json
     assert_response :unprocessable_entity
     get directories_device_backup_location_path(@device), params: { path: other.to_s }
@@ -58,7 +58,7 @@ class BackupLocationsControllerTest < ActionDispatch::IntegrationTest
     upload_to(@folder)
     run = @device.backup_runs.order(:id).last
     file = run.backup_files.sole
-    assert_equal @folder.relative_path_from(Pathname(@temporary).realpath).to_s, run.backup_subdirectory
+    assert_equal @folder.to_s, run.storage_root
     assert @folder.join(file.storage_path).file?
     upload_to(@root)
     get restore_device_backup_run_backup_file_path(@device, run, file)
@@ -81,10 +81,50 @@ class BackupLocationsControllerTest < ActionDispatch::IntegrationTest
     sign_in
     upload_to(@folder)
     run = @device.backup_runs.order(:id).last
-    run.update!(backup_subdirectory: "users/#{users(:bob).id}")
+    run.update!(storage_root: nil, backup_subdirectory: "users/#{users(:bob).id}")
     get restore_device_backup_run_backup_file_path(@device, run, run.backup_files.sole)
     assert_redirected_to device_backup_runs_path(@device)
     assert_equal "Choose a folder inside your backup storage.", flash[:alert]
+  end
+
+  test "upload to Downloads outside the default root succeeds and displays green confirmation" do
+    sign_in
+    Dir.mktmpdir("phonevault_downloads") do |external|
+      destination = Pathname(external).realpath.join("TEST")
+      destination.mkdir
+      post validate_path_device_backup_location_path(@device), params: { path: destination.to_s }, as: :json
+      assert_response :success
+      get directories_device_backup_location_path(@device), params: { path: destination.to_s }, as: :json
+      assert_equal destination.to_s, response.parsed_body["path"]
+      assert_equal destination.parent.to_s, response.parsed_body["parent"]
+
+      upload_to(destination)
+      assert_redirected_to device_backup_runs_path(@device)
+      follow_redirect!
+      assert_select "[role=status].bg-green-50.text-green-800", text: "File uploaded successfully. Backup completed."
+      run = @device.backup_runs.order(:id).last
+      file = run.backup_files.sole
+      assert_equal destination.to_s, run.storage_root
+      assert destination.join(file.storage_path).file?
+
+      # Explicit destinations must not depend on the default root being available.
+      ENV["PHONEVAULT_BACKUP_ROOT"] = File.join(@temporary, "different-default")
+      get restore_device_backup_run_backup_file_path(@device, run, file)
+      assert_response :success
+      assert_equal File.binread(file_fixture("sample_backup.txt")), response.body
+    end
+  end
+
+  test "existing relative-location backups still restore" do
+    sign_in
+    relative = @folder.relative_path_from(Pathname(@temporary).realpath).to_s
+    run = @device.backup_runs.create!(status: :completed, backup_subdirectory: relative)
+    file = BackupStorage.new(root: @folder).store(
+      StringIO.new("older backup"), backup_run: run, original_filename: "older.txt"
+    )
+    get restore_device_backup_run_backup_file_path(@device, run, file)
+    assert_response :success
+    assert_equal "older backup", response.body
   end
 
   private

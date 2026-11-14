@@ -29,7 +29,7 @@
         id: "backup_run_save_path", required: true, spellcheck: false,
         class: field_classes, aria: { describedby: "save-path-help save-path-result" },
         data: { backup_path_target: "input", action: "input->backup-path#clear" } %>
-      <p id="save-path-help" class="mt-2 text-sm text-neutral-600">Absolute path on the PhoneVault server. In Docker, use the container path. Choose an existing folder inside your account’s storage.</p>
+      <p id="save-path-help" class="mt-2 text-sm text-neutral-600">Choose any existing folder on the PhoneVault server that the app can write to. In Docker, use a mounted container path.</p>
       <div class="flex flex-wrap gap-3 mt-3">
         <%= link_to "Browse folders", directories_device_backup_location_path(@device), data: { action: "backup-path#browse" }, class: button_classes(:secondary, size: :small) %>
         <button type="button" class="<%= button_classes(:secondary, size: :small) %>"

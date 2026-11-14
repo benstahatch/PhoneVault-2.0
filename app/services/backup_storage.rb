@@ -22,6 +22,10 @@ class BackupStorage
     /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
 
   def self.for_run(run)
+    if run.storage_root.present?
+      return new(root: BackupDirectory.server.resolve!(run.storage_root))
+    end
+
     return new if run.backup_subdirectory.blank?
 
     # Saved relative to the global root so remounting storage preserves paths.

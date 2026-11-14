@@ -8,8 +8,8 @@ class BackupRunsController < ApplicationController
   def new
     @backup_run = @device.backup_runs.new
     begin
-      browser = BackupDirectory.for_user(current_user)
-      @save_path = browser.resolve!(params[:save_path].presence || browser.root.to_s).to_s
+      initial_path = params[:save_path].presence || BackupDirectory.for_user(current_user).root.to_s
+      @save_path = BackupDirectory.server.resolve!(initial_path).to_s
     rescue BackupDirectory::Error => error
       @backup_run.errors.add(:base, error.message)
     end
@@ -26,18 +26,16 @@ class BackupRunsController < ApplicationController
     end
 
     begin
-      browser = BackupDirectory.for_user(current_user)
       # Older clients can omit the new field; an explicitly blank path is invalid.
-      @save_path = browser.root.to_s unless attributes.key?(:save_path)
-      destination = browser.test_write!(@save_path)
-      relative = destination.relative_path_from(BackupStorage.default_root.realpath).to_s
+      @save_path = BackupDirectory.for_user(current_user).root.to_s unless attributes.key?(:save_path)
+      destination = BackupDirectory.server.test_write!(@save_path)
     rescue BackupDirectory::Error => error
       @backup_run = @device.backup_runs.new
       @backup_run.errors.add(:base, error.message)
       return render :new, status: :unprocessable_entity
     end
 
-    @backup_run = @device.backup_runs.create!(status: :pending, backup_subdirectory: relative)
+    @backup_run = @device.backup_runs.create!(status: :pending, storage_root: destination.to_s)
     @backup_run.start!
 
     begin
@@ -61,7 +59,7 @@ class BackupRunsController < ApplicationController
 
     # recorded outside begin/rescue so a logging error can't mark a stored backup as failed
     record_security_event("BACKUP_SUCCESS", current_user)
-    redirect_to device_backup_runs_path(@device), notice: "Backup completed."
+    redirect_to device_backup_runs_path(@device), notice: "File uploaded successfully. Backup completed."
   end
 
   private

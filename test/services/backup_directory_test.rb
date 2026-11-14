@@ -46,6 +46,17 @@ class BackupDirectoryTest < ActiveSupport::TestCase
     assert_raises(BackupDirectory::Error) { BackupDirectory.for_user(users(:alice)) }
   end
 
+  test "server paths may be outside account storage and aliases resolve canonically" do
+    Dir.mktmpdir("phonevault_external") do |external|
+      directory = Pathname(external).realpath
+      browser = BackupDirectory.server
+      assert_equal directory, browser.test_write!(external)
+      link = @browser.root.join("external-link")
+      File.symlink(directory, link)
+      assert_equal directory, browser.resolve!(link.to_s)
+    end
+  end
+
   test "write failure produces an actionable error and leaves no probe" do
     # Directory mode alone is unreliable when tests run as root.
     original_create = Tempfile.method(:create)

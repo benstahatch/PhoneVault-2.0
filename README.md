@@ -1361,27 +1361,27 @@ opens the actual directory tree without clearing your selected file, and
 repeat that check on the server. Choose an existing folder; create additional
 folders on the server with permissions allowing the Rails process to write.
 
-New uploads are restricted to the signed-in account's directory:
-`<PHONEVAULT_BACKUP_ROOT>/users/<user ID>/`. The app creates this account directory
-automatically. Other accounts' directories, parent traversal, and symbolic-link
-folders are not accepted. Server administrators should keep these directories
-owned by the Rails user and prevent untrusted local processes from modifying them.
+New uploads can target **any existing directory writable by the Rails process**,
+including `/home/boomac/Downloads/TEST`. The default is still
+`<PHONEVAULT_BACKUP_ROOT>/users/<user ID>/`, but the save field and folder browser
+can select directories outside it. Directory browsing follows the server account's
+filesystem permissions. Relative paths and parent traversal are rejected;
+symbolic-link aliases resolve to their canonical destination before it is saved.
 
 With Docker, the existing Compose mount maps the host's configured backup folder
-to `/rails/storage/backups`. For example, with host
-`PHONEVAULT_BACKUP_ROOT=/mnt/phonevault-backups`, account 42 can select
-`/rails/storage/backups/users/42/photos` after the administrator creates
-`/mnt/phonevault-backups/users/42/photos` on the host (writable by UID 1000).
-The field uses the **container path**, not the host path or your browser's download
-folder. Additional disks must be mounted into the permitted storage tree.
+to `/rails/storage/backups`. To use another host folder, mount it into the container
+and select its container path. For example, mount `/home/boomac/Downloads` at
+`/downloads` and choose `/downloads/TEST`. The directory must exist and be writable
+by the container's Rails user (UID 1000). Browser download destinations are separate:
+Restore downloads use your browser's download settings or Save As dialog.
 
-Each backup run records its selected directory relative to the storage root.
-Files retain the existing `<run ID>/<UUID>` layout underneath that directory;
-original filenames are retained in the database and used for downloads. Restore
-uses the recorded directory even after a later upload selects somewhere else.
-Existing backups with an empty directory value continue restoring from the
-original root. Changing the configured root requires keeping the same relative
-folder structure and moving or mounting the stored data there.
+Each new backup run records the absolute, canonical destination. Files retain the
+existing `<run ID>/<UUID>` layout underneath that directory; original filenames
+are retained in the database and used for downloads. Restore uses that recorded
+location even after another upload chooses a different directory or the configured
+default changes. Keep that absolute path available when moving the server.
+Previously saved relative destinations and original-root backups remain supported.
+The history page shows a green success message after an upload completes.
 
 After updating the application, run `bin/rails db:migrate` in its normal runtime
 before using the new form. No existing backup files are moved by the migration.

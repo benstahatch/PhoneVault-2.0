@@ -1,7 +1,7 @@
 <h1 class="mb-6 text-3xl font-bold">Choose a save folder</h1>
 <div class="rounded-xl border border-neutral-200 bg-white p-5">
   <p>Server path: <code class="break-all"><%= @path %></code></p>
-  <p class="text-sm text-neutral-600">Only your account’s storage folders are shown. Create additional folders on the server inside <code><%= @root %></code>. Select a folder, then choose the file to upload.</p>
+  <p class="text-sm text-neutral-600">Browse server folders and select an existing writable directory. In Docker, only mounted folders are available. Select a folder, then choose the file to upload.</p>
   <div class="flex flex-wrap gap-3 my-4">
     <%= link_to "Use this folder", new_device_backup_run_path(@device, save_path: @path.to_s), class: button_classes %>
     <% unless @path == @root %>
