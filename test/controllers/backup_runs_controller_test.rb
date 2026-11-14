@@ -119,6 +119,23 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.rounded-lg[href='#{device_backup_runs_path(device)}']", text: "Back to backups"
   end
 
+  test "upload page wires the file field to a hidden preview panel" do
+    sign_in_as users(:alice)
+
+    get new_device_backup_run_path(devices(:alice_phone))
+
+    assert_select "[data-controller='file-preview']" do
+      assert_select "input[type=file][data-file-preview-target='input'][data-action='change->file-preview#show']"
+      assert_select "[data-file-preview-target='panel'][hidden]"
+      %w[image badge name size].each { |target| assert_select "[data-file-preview-target='#{target}']" }
+    end
+
+    # a display class like flex would override the hidden attribute and show an empty panel
+    css_select("[data-file-preview-target][hidden]").each do |element|
+      assert_no_match(/\b(flex|grid|block|inline-flex)\b/, element["class"].to_s)
+    end
+  end
+
   test "index requires login" do
     get device_backup_runs_path(devices(:alice_phone))
     assert_redirected_to login_path

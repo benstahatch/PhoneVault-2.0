@@ -12,9 +12,24 @@
   <% end %>
 
   <%= form_with model: [@device, @backup_run] do |form| %>
-    <div class="mb-6">
+    <div class="mb-6" data-controller="file-preview">
       <%= form.label :file, class: label_classes %>
-      <%= form.file_field :file, required: true, class: file_field_classes %>
+      <%= form.file_field :file, required: true, class: file_field_classes,
+            data: { file_preview_target: "input", action: "change->file-preview#show" } %>
+
+      <%# the hidden elements carry no display classes, because a class like flex would override hidden %>
+      <div class="mt-4" data-file-preview-target="panel" aria-live="polite" hidden>
+        <div class="flex items-center gap-4 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+          <img class="h-20 w-20 shrink-0 rounded-md border border-neutral-200 bg-white object-cover"
+               data-file-preview-target="image" hidden>
+          <div class="h-20 w-20 shrink-0 rounded-md bg-[#171717] text-center text-sm font-bold leading-[5rem] text-white"
+               data-file-preview-target="badge" aria-hidden="true" hidden></div>
+          <div class="min-w-0">
+            <p class="m-0 truncate font-medium text-neutral-900" data-file-preview-target="name"></p>
+            <p class="m-0 mt-1 text-sm text-neutral-600" data-file-preview-target="size"></p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="flex flex-wrap gap-3">
