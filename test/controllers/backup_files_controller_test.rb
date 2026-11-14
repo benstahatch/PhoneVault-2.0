@@ -180,7 +180,69 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "preview requires login" do
+    get preview_device_backup_run_backup_file_path(devices(:alice_phone), 1, 1)
+
+    assert_redirected_to login_path
+  end
+
+  test "preview serves a real image inline with a locked-down policy" do
+    sign_in_as users(:alice)
+    run = devices(:alice_phone).backup_runs.create!(status: :completed)
+
+    with_backup_root do |storage|
+      file = storage.store(StringIO.new(PNG_BYTES), backup_run: run, original_filename: "IMG_1.png")
+
+      get preview_device_backup_run_backup_file_path(devices(:alice_phone), run, file)
+
+      assert_response :success
+      assert_equal "image/png", response.media_type
+      assert_match(/\Ainline/, response.headers["Content-Disposition"])
+      assert_match "default-src 'none'", response.headers["Content-Security-Policy"]
+      assert_equal PNG_BYTES, response.body.b
+    end
+  end
+
+  test "preview refuses a file that is not really an image" do
+    sign_in_as users(:alice)
+    run = devices(:alice_phone).backup_runs.create!(status: :completed)
+
+    with_backup_root do |storage|
+      file = storage.store(StringIO.new("<html><script>alert(1)</script></html>"), backup_run: run, original_filename: "photo.png")
+
+      get preview_device_backup_run_backup_file_path(devices(:alice_phone), run, file)
+
+      assert_response :not_found
+    end
+  end
+
+  test "preview cannot show another user's file" do
+    sign_in_as users(:alice)
+    run = devices(:bob_phone).backup_runs.create!(status: :completed)
+
+    with_backup_root do |storage|
+      file = storage.store(StringIO.new(PNG_BYTES), backup_run: run, original_filename: "bob.png")
+
+      get preview_device_backup_run_backup_file_path(devices(:bob_phone), run, file)
+
+      assert_response :not_found
+    end
+  end
+
   private
+
+  PNG_BYTES = "\x89PNG\r\n\x1a\n".b + ("x" * 20)
+
+  # points storage at a temporary folder so tests never touch real backups
+  def with_backup_root
+    Dir.mktmpdir("phonevault_preview") do |root|
+      previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+      ENV["PHONEVAULT_BACKUP_ROOT"] = root
+      yield BackupStorage.new
+    ensure
+      ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
+    end
+  end
 
   def sign_in_as(user, password: "secret123")
     post login_path,

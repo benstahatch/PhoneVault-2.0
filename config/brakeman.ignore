@@ -22,6 +22,29 @@
         22
       ],
       "note": "false positive: restore paths come from BackupStorage, which validates the internal run_id/UUID storage format, enforces lexical and realpath containment under the configured storage root, rejects symlink escapes, and verifies size and SHA-256 before send_file. Ownership is also scoped through current_user -> device -> backup_run -> backup_file. Covered by BackupStorage and controller tests."
+    },
+    {
+      "warning_type": "File Access",
+      "warning_code": 16,
+      "fingerprint": "ca9402daae640b984cf6624a88cd92a7392da7940e6397a3513495056b6361ad",
+      "check_name": "SendFile",
+      "message": "Parameter value used in file name",
+      "file": "app/controllers/backup_files_controller.rb",
+      "line": 39,
+      "link": "https://brakemanscanner.org/docs/warning_types/file_access/",
+      "code": "send_file(BackupStorage.new.path_for(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.find(params[:id])).to_s, :type => BackupPreview.new.image_type(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.find(params[:id])), :disposition => \"inline\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "BackupFilesController",
+        "method": "preview"
+      },
+      "user_input": "params[:id]",
+      "confidence": "Weak",
+      "cwe_id": [
+        22
+      ],
+      "note": "false positive: preview paths come from BackupStorage#path_for, which validates the internal run_id/UUID storage format, enforces lexical and realpath containment under the configured storage root, and rejects symlink escapes. Only files whose first bytes are PNG/JPEG/GIF/WebP are served, inline with a default-src 'none' CSP. Ownership is scoped through current_user -> device -> backup_run -> backup_file. Covered by BackupPreview and controller tests."
     }
   ],
   "brakeman_version": "8.1.0"

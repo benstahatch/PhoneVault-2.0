@@ -136,6 +136,31 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "history shows image thumbnails, text excerpts, and badges" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    run = device.backup_runs.create!(status: :completed)
+
+    Dir.mktmpdir("phonevault_history_preview") do |root|
+      previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+      ENV["PHONEVAULT_BACKUP_ROOT"] = root
+      storage = BackupStorage.new
+      photo = storage.store(StringIO.new("\x89PNG\r\n\x1a\n".b + "x" * 20), backup_run: run, original_filename: "IMG_1.png")
+      storage.store(StringIO.new("<b>milk</b>\neggs\n"), backup_run: run, original_filename: "groceries.txt")
+      storage.store(StringIO.new("%PDF-1.7"), backup_run: run, original_filename: "scan.pdf")
+
+      get device_backup_runs_path(device)
+
+      assert_select "img[src='#{preview_device_backup_run_backup_file_path(device, run, photo)}'][loading=lazy]"
+      # the text is escaped, so a tag inside a file can't change the page
+      assert_select "pre", text: "<b>milk</b>\neggs"
+      assert_select "b", text: "milk", count: 0
+      assert_select "div[aria-hidden=true]", text: "PDF"
+    ensure
+      ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
+    end
+  end
+
   test "index requires login" do
     get device_backup_runs_path(devices(:alice_phone))
     assert_redirected_to login_path

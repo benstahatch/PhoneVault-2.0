@@ -1,5 +1,24 @@
+<% image_type = @preview.image_type(file) %>
+<% excerpt = image_type ? nil : @preview.text_excerpt(file) %>
 <td class="backup-file-details">
-  <strong><%= file.original_filename %></strong>
+  <div class="flex items-start gap-3">
+    <% if image_type %>
+      <%= image_tag preview_device_backup_run_backup_file_path(@device, run, file),
+            alt: "Preview of #{file.original_filename}", loading: "lazy",
+            class: "h-16 w-16 shrink-0 rounded-md border border-neutral-200 bg-white object-cover" %>
+    <% elsif excerpt.nil? %>
+      <div class="h-16 w-16 shrink-0 rounded-md bg-[#171717] text-center text-xs font-bold leading-[4rem] text-white"
+           aria-hidden="true"><%= @preview.badge(file) %></div>
+    <% end %>
+    <div class="min-w-0">
+      <strong><%= file.original_filename %></strong>
+      <% if excerpt %>
+        <pre class="m-0 mt-2 max-w-sm overflow-hidden whitespace-pre-wrap break-words rounded-md border border-neutral-200 bg-neutral-50 p-2 font-mono text-xs leading-5 text-neutral-700"
+             aria-label="First lines of <%= file.original_filename %>"><%= excerpt.text %><% if excerpt.truncated %>
+…<% end %></pre>
+      <% end %>
+    </div>
+  </div>
   <details>
     <summary>SHA-256 details</summary>
     <p>Recorded when uploaded; file size and hash are checked again when restored.</p>

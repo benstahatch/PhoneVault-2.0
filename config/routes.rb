@@ -12,6 +12,7 @@ resources :devices, only: %i[index new create edit update] do
   resources :backup_files, only: [] do
     member do
       get :restore
+      get :preview
       end
     end
   end
