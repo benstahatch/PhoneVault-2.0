@@ -378,14 +378,14 @@ The Rails container only starts with Compose's `app` profile, so the development
 
 ## Demo Data
 
-To show PhoneVault without starting from an empty account, create a `demo` account with three devices and a few weeks of backups, including one failed run. The files are real (small photos, contacts, a calendar, notes), so Restore works on them.
+To show PhoneVault without starting from an empty account, create a `demo` account with three devices and a few weeks of backups, including one failed run. The files are real (small photos, contacts, a calendar, notes), so Restore works on them. It also gets a matching Activity history, including one failed sign-in so the warning highlight shows.
 
 ```bash
 docker compose exec app bin/rails phonevault:demo         # with launch.py
 bin/rails phonevault:demo                                 # Rails on the host
 ```
 
-It prints a random password once. Set `DEMO_PASSWORD` to choose it instead, for example `docker compose exec -e DEMO_PASSWORD=your-password app bin/rails phonevault:demo`. Delete the account, its backups, and its stored files with `bin/rails phonevault:demo:reset` (or `docker compose exec app bin/rails phonevault:demo:reset`).
+It prints a random password once. Set `DEMO_PASSWORD` to choose it instead, for example `docker compose exec -e DEMO_PASSWORD=your-password app bin/rails phonevault:demo`. Delete the account, its backups, its stored files, and its activity with `bin/rails phonevault:demo:reset` (or `docker compose exec app bin/rails phonevault:demo:reset`).
 
 The demo account is not part of `db/seeds.rb` on purpose: seeds run automatically when a new database is created, which would give every install a demo login.
 

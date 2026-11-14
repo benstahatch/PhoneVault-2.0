@@ -35,6 +35,19 @@ class DemoDataTest < ActiveSupport::TestCase
     assert runs.all? { |run| run.created_at < Time.current }
   end
 
+  test "create gives the demo account an activity history, including a failed sign-in" do
+    user = @demo.create.user
+    events = user.security_events
+
+    assert_equal 1, events.where(event_type: "ACCOUNT_CREATED").count
+    assert_equal 3, events.where(event_type: "DEVICE_REGISTERED").count
+    assert_equal 8, events.where(event_type: "BACKUP_SUCCESS").count
+    assert_equal 1, events.where(event_type: "BACKUP_FAILED").count
+    assert_equal 1, events.where(event_type: "LOGIN_FAILED").count
+    assert events.where(event_type: "BACKUP_SUCCESS").all? { |event| event.subject.is_a?(BackupFile) }
+    assert events.all? { |event| event.created_at < Time.current }
+  end
+
   test "every demo file is stored and passes the restore check" do
     user = @demo.create.user
     files = BackupFile.joins(backup_run: :device).where(devices: { user_id: user.id })
@@ -68,6 +81,7 @@ class DemoDataTest < ActiveSupport::TestCase
     assert @demo.reset
 
     assert_nil User.find_by(username: "demo")
+    assert_equal 0, SecurityEvent.where(user_id: user.id).count
     assert_equal 0, Device.where(user_id: user.id).count
     paths.each { |path| assert_not File.exist?(path) }
   end
