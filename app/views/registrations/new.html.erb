@@ -1,11 +1,12 @@
+<section class="mx-auto box-border w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+
 <h1>Create a PhoneVault Account</h1>
 
-
 <% if @user.errors.any? %>
-  <div>
-    <h2><%= pluralize(@user.errors.count, "error") %> prevented this account from being created:</h2>
+  <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+    <h2 class="m-0 mb-2 text-sm font-semibold"><%= pluralize(@user.errors.count, "error") %> prevented this account from being created:</h2>
 
-    <ul>
+    <ul class="m-0 pl-5">
       <% @user.errors.full_messages.each do |message| %>
         <li><%= message %></li>
       <% end %>
@@ -14,38 +15,44 @@
 <% end %>
 
 <%= form_with model: @user, url: signup_path do |form| %>
-  <div>
-    <%= form.label :username %>
+  <div class="mb-5">
+    <%= form.label :username, class: label_classes %>
     <%= form.text_field :username,
           required: true,
+          autofocus: true,
           autocomplete: "username",
           autocapitalize: "none",
           autocorrect: "off",
-          spellcheck: false %>
+          spellcheck: false,
+          class: field_classes %>
   </div>
 
-  <div>
-    <%= form.label :display_name %>
+  <div class="mb-5">
+    <%= form.label :display_name, class: label_classes %>
     <%= form.text_field :display_name,
-          required: true %>
+          required: true,
+          class: field_classes %>
   </div>
 
-  <div>
-    <%= form.label :password %>
+  <div class="mb-5">
+    <%= form.label :password, class: label_classes %>
     <%= form.password_field :password,
           required: true,
-          autocomplete: "new-password" %>
+          autocomplete: "new-password",
+          class: field_classes %>
   </div>
 
-  <div>
-    <%= form.label :password_confirmation %>
+  <div class="mb-5">
+    <%= form.label :password_confirmation, class: label_classes %>
     <%= form.password_field :password_confirmation,
           required: true,
-          autocomplete: "new-password" %>
+          autocomplete: "new-password",
+          class: field_classes %>
   </div>
 
-  <div>
-    <%= form.submit "Create account" %>
+  <div class="mb-5">
+    <%= form.submit "Create account",
+          class: "w-full rounded-lg bg-[#c45a00] px-4 py-3 font-semibold text-white cursor-pointer transition-colors hover:bg-[#a94c00] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" %>
   </div>
 <% end %>
 
@@ -53,4 +60,6 @@
 
 <p>Already have a PhoneVault account?</p>
 
-<%= link_to "Sign in", login_path %>
+<%= link_to "Sign in", login_path, class: "#{button_classes(:secondary)} w-full" %>
+
+</section>

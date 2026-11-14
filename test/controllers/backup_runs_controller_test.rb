@@ -119,6 +119,48 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a.rounded-lg[href='#{device_backup_runs_path(device)}']", text: "Back to backups"
   end
 
+  test "upload page wires the file field to a hidden preview panel" do
+    sign_in_as users(:alice)
+
+    get new_device_backup_run_path(devices(:alice_phone))
+
+    assert_select "[data-controller='file-preview']" do
+      assert_select "input[type=file][data-file-preview-target='input'][data-action='change->file-preview#show']"
+      assert_select "[data-file-preview-target='panel'][hidden]"
+      %w[image badge name size].each { |target| assert_select "[data-file-preview-target='#{target}']" }
+    end
+
+    # a display class like flex would override the hidden attribute and show an empty panel
+    css_select("[data-file-preview-target][hidden]").each do |element|
+      assert_no_match(/\b(flex|grid|block|inline-flex)\b/, element["class"].to_s)
+    end
+  end
+
+  test "history shows image thumbnails, text excerpts, and badges" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    run = device.backup_runs.create!(status: :completed)
+
+    Dir.mktmpdir("phonevault_history_preview") do |root|
+      previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+      ENV["PHONEVAULT_BACKUP_ROOT"] = root
+      storage = BackupStorage.new
+      photo = storage.store(StringIO.new("\x89PNG\r\n\x1a\n".b + "x" * 20), backup_run: run, original_filename: "IMG_1.png")
+      storage.store(StringIO.new("<b>milk</b>\neggs\n"), backup_run: run, original_filename: "groceries.txt")
+      storage.store(StringIO.new("%PDF-1.7"), backup_run: run, original_filename: "scan.pdf")
+
+      get device_backup_runs_path(device)
+
+      assert_select "img[src='#{preview_device_backup_run_backup_file_path(device, run, photo)}'][loading=lazy]"
+      # the text is escaped, so a tag inside a file can't change the page
+      assert_select "pre", text: "<b>milk</b>\neggs"
+      assert_select "b", text: "milk", count: 0
+      assert_select "div[aria-hidden=true]", text: "PDF"
+    ensure
+      ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
+    end
+  end
+
   test "index requires login" do
     get device_backup_runs_path(devices(:alice_phone))
     assert_redirected_to login_path

@@ -127,6 +127,29 @@ class BackupLocationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "older backup", response.body
   end
 
+  test "history and image previews use the saved external destination" do
+    sign_in
+    Dir.mktmpdir("phonevault_external_preview") do |external|
+      run = @device.backup_runs.create!(status: :completed, storage_root: external)
+      storage = BackupStorage.for_run(run)
+      bytes = "\x89PNG\r\n\x1a\n".b + "image data"
+      image = storage.store(StringIO.new(bytes), backup_run: run, original_filename: "photo.png")
+      storage.store(StringIO.new("External folder text"), backup_run: run, original_filename: "notes.txt")
+      get device_backup_runs_path(@device)
+      assert_response :success
+      assert_select "img[src=?]", preview_device_backup_run_backup_file_path(@device, run, image)
+      assert_select "pre", text: "External folder text"
+      assert_match external, response.body
+      get preview_device_backup_run_backup_file_path(@device, run, image)
+      assert_response :success
+      assert_equal bytes, response.body.b
+      FileUtils.rm_f(storage.path_for(image))
+      get device_backup_runs_path(@device)
+      assert_response :success
+      assert_select "img", count: 0
+    end
+  end
+
   private
 
   def sign_in

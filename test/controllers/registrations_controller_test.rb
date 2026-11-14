@@ -7,6 +7,14 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='user[username]'][autocapitalize='none'][autocorrect='off'][spellcheck='false']"
   end
 
+  test "signup page links to sign in with a styled button and styles its fields" do
+    get signup_path
+
+    assert_select "a.rounded-lg[href='#{login_path}']", text: "Sign in"
+    assert_select "input[name='user[username]'].rounded-lg"
+    assert_select "input[type=submit][value='Create account'].rounded-lg"
+  end
+
   test "signup form loads without logging in" do
     get signup_path
 

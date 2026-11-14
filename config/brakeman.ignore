@@ -22,6 +22,29 @@
         22
       ],
       "note": "False positive: device, run, and file are scoped through current_user. New upload destinations are intentionally any writable server directory and are stored canonically in storage_root; this field is never accepted directly from request mass assignment. Restore uses that recorded directory and validates the recorded readable device-folder/filename or legacy run_id/UUID path, lexical and realpath containment beneath the recorded destination, file size, and SHA-256 before send_file. Legacy relative destinations retain account-root validation. Covered by storage, controller, and external-destination restore tests."
+    },
+    {
+      "warning_type": "File Access",
+      "warning_code": 16,
+      "fingerprint": "25daf4a88c466e5d873a95cc5571b914911464acf796c5f622ec17e03e014143",
+      "check_name": "SendFile",
+      "message": "Parameter value used in file name",
+      "file": "app/controllers/backup_files_controller.rb",
+      "line": 43,
+      "link": "https://brakemanscanner.org/docs/warning_types/file_access/",
+      "code": "send_file(BackupStorage.for_run(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id])).path_for(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.find(params[:id])).to_s, :type => BackupPreview.new.image_type(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.find(params[:id])), :disposition => \"inline\")",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "BackupFilesController",
+        "method": "preview"
+      },
+      "user_input": "params[:id]",
+      "confidence": "Weak",
+      "cwe_id": [
+        22
+      ],
+      "note": "False positive: preview uses the saved destination through BackupStorage.for_run and path_for, which validates readable or legacy relative paths and filesystem containment. File lookup is scoped through current_user/device/run/file. Only PNG/JPEG/GIF/WebP signatures are served with the restrictive preview CSP. External destination previews and ownership are covered by controller tests."
     }
   ],
   "brakeman_version": "8.1.0"
