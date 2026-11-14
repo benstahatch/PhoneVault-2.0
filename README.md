@@ -1197,7 +1197,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Handle missing stored files.
 - [x] Handle corrupted stored files.
 - [x] Reject path traversal and symlink escapes.
-- [ ] Improve backup-history presentation and file details.
+- [x] Improve backup-history presentation and file details.
 - [x] Verify the complete browser backup -> restore workflow from a fresh installation.
 
 ## Storage Configuration and Dashboard
