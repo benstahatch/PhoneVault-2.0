@@ -196,30 +196,32 @@ Current schema fields:
 - `user_id` _(FK -> users.id, nullable)_
 - `event_type`
 - `ip_address`
+- `subject_type`, `subject_id` _(which device, backup run, or file the event is about; nullable)_
+- `details` _(a short readable summary, up to 255 characters)_
 - `created_at`
 
-Events are recorded automatically with the user (when known) and the request's IP address:
+Events are recorded automatically with the user (when known) and the request's IP address. Events about a device, backup run, or file also save that record as the **subject**, plus a **details** snapshot:
 
-| Event | Recorded when |
-| --- | --- |
-| `LOGIN_SUCCESS` | A user logs in. |
-| `LOGIN_FAILED` | A login fails. Linked to the targeted account when the username exists, otherwise saved with no user. |
-| `LOGIN_RATE_LIMITED` | A login attempt is blocked by the rate limit (10 attempts per IP address every 3 minutes). |
-| `LOGOUT` | A user logs out. |
-| `ACCOUNT_CREATED` | A new account is created through signup. |
-| `DEVICE_REGISTERED` | A device is saved successfully. |
-| `DEVICE_RENAMED` | A user changes the name of one of their devices. |
-| `BACKUP_SUCCESS` | An uploaded file is stored and its backup run is marked completed. |
-| `BACKUP_FAILED` | Storing an uploaded file fails (including uploads over the size limit) and its backup run is marked failed. |
-| `FILE_RESTORED` | A file passes its size and SHA-256 checks and is sent for download. |
-| `RESTORE_FILE_MISSING` | A restore is requested but the file is missing from storage. |
-| `RESTORE_FILE_CORRUPTED` | A restore is requested but the file fails SHA-256 verification. |
+| Event | Recorded when | Subject | Example details |
+| --- | --- | --- | --- |
+| `LOGIN_SUCCESS` | A user logs in. | | |
+| `LOGIN_FAILED` | A login fails. Linked to the targeted account when the username exists, otherwise saved with no user. | | |
+| `LOGIN_RATE_LIMITED` | A login attempt is blocked by the rate limit (10 attempts per IP address every 3 minutes). | | |
+| `LOGOUT` | A user logs out. | | |
+| `ACCOUNT_CREATED` | A new account is created through signup. | | |
+| `DEVICE_REGISTERED` | A device is saved successfully. | Device | `Jordan's iPhone (phone)` |
+| `DEVICE_RENAMED` | A user changes the name of one of their devices. | Device | `Old Phone → Jordan's iPhone` |
+| `BACKUP_SUCCESS` | An uploaded file is stored and its backup run is marked completed. | Backup file | `IMG_2041.png to Jordan's iPhone` |
+| `BACKUP_FAILED` | Storing an uploaded file fails (including uploads over the size limit) and its backup run is marked failed. | Backup run | `video.mov to Jordan's iPhone (over the size limit)` |
+| `FILE_RESTORED` | A file passes its size and SHA-256 checks and is sent for download. | Backup file | `IMG_2041.png from Jordan's iPhone` |
+| `RESTORE_FILE_MISSING` | A restore is requested but the file is missing from storage. | Backup file | `IMG_2041.png from Jordan's iPhone` |
+| `RESTORE_FILE_CORRUPTED` | A restore is requested but the file fails SHA-256 verification. | Backup file | `IMG_2041.png from Jordan's iPhone` |
+
+The subject has no foreign key on purpose. A security log should keep every row, so deleting a device or file never deletes or blocks its events. The `subject_type`/`subject_id` pair still records what it pointed at. Details are written when the event happens, so a later rename doesn't change what an old event says. Login details never include what was typed, because people sometimes type a password into the username field.
 
 Not recorded yet:
 
 - `AUTHORIZATION_DENIED`: requests for another user's records already return 404, but are not logged. Rails cannot tell those apart from IDs that simply don't exist without an extra lookup.
-
-Current limitation: events record what happened, who, and from where, but not which device, backup run, or file was involved.
 
 ---
 
@@ -1159,7 +1161,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Limit the size of stored uploads with `PHONEVAULT_MAX_UPLOAD_MB`.
 - [ ] Reject oversized upload requests before Rails receives the whole body.
 - [ ] Decide whether to log `AUTHORIZATION_DENIED` for requests to records the user does not own.
-- [ ] Record which device, backup run, or file a security event is about.
+- [x] Record which device, backup run, or file a security event is about.
 - [ ] Research 2FA.
 - [ ] Research recovery codes.
 - [ ] Research device API tokens.

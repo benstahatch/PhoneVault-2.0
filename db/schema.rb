@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_000729) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_120000) do
   create_table "backup_files", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "backup_run_id", null: false
     t.datetime "created_at", null: false
@@ -45,11 +45,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_000729) do
 
   create_table "security_events", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "details"
     t.string "event_type", limit: 50, null: false
     t.string "ip_address", limit: 45
+    t.bigint "subject_id"
+    t.string "subject_type"
     t.bigint "user_id"
     t.index ["created_at"], name: "index_security_events_on_created_at"
     t.index ["event_type"], name: "index_security_events_on_event_type"
+    t.index ["subject_type", "subject_id"], name: "index_security_events_on_subject"
     t.index ["user_id"], name: "index_security_events_on_user_id"
   end
 

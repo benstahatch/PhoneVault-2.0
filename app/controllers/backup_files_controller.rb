@@ -11,7 +11,7 @@ def restore
   path = BackupStorage.new.restore(@backup_file)
 
   # only reached when the file exists and its sha-256 matches
-  record_security_event("FILE_RESTORED", current_user)
+  record_security_event("FILE_RESTORED", current_user, subject: @backup_file, details: file_details)
 
   # sanitize the user-provided filename before sending it to the browser
   safe_filename = ActiveStorage::Filename
@@ -41,6 +41,10 @@ end
 
   private
 
+  def file_details
+    "#{@backup_file.original_filename} from #{@device.name}"
+  end
+
   def set_device
     # only find devices owned by the logged-in user
     @device = current_user.devices.find(params[:device_id])
@@ -58,14 +62,14 @@ end
 
   def missing_file
     # return to backup history if the stored file no longer exists
-    record_security_event("RESTORE_FILE_MISSING", current_user)
+    record_security_event("RESTORE_FILE_MISSING", current_user, subject: @backup_file, details: file_details)
     redirect_to device_backup_runs_path(@device),
       alert: "Backup file is missing from storage."
   end
 
   def corrupted_file
     # return to backup history if the stored file fails sha-256 verification
-    record_security_event("RESTORE_FILE_CORRUPTED", current_user)
+    record_security_event("RESTORE_FILE_CORRUPTED", current_user, subject: @backup_file, details: file_details)
     redirect_to device_backup_runs_path(@device),
       alert: "Backup file failed integrity verification."
   end
