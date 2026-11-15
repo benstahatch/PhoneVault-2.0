@@ -4,6 +4,8 @@ class User < ApplicationRecord
   has_secure_password
 
   has_many :devices, dependent: :restrict_with_error
+  has_many :backup_runs, through: :devices
+  has_many :backup_files, through: :backup_runs
   has_many :security_events, dependent: :nullify
 
   validates :username,

@@ -48,11 +48,7 @@ class TrashRetentionJob < ApplicationJob
 
   def delete_if_still_expired(file_id)
     BackupFile.transaction do
-      file = BackupFile.joins(backup_run: { device: :user })
-        .where(id: file_id)
-        .trashed
-        .lock
-        .first
+      file = BackupFile.trashed.lock.find_by(id: file_id)
       next unless file
 
       owner = User.lock.find(file.backup_run.device.user_id)
