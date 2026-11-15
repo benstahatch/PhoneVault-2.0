@@ -6,8 +6,8 @@ require "securerandom"
 # them against their SHA-256 on the way back out.
 #
 # New paths use Device-Backups/original-filename with safe path components.
-# Existing run_id/UUID paths remain readable. Atomic publication never replaces
-# an existing file; repeated names receive a numbered suffix.
+# Atomic publication never replaces an existing file; repeated names receive
+# a numbered suffix.
 class BackupStorage
   class Error < StandardError; end
   class MissingFile < Error; end
@@ -17,21 +17,9 @@ class BackupStorage
   CHUNK_SIZE = 1.megabyte
   DEFAULT_MAX_BYTES = 10.gigabytes
 
-  # valid UUID format used for generated storage filenames
-  UUID_PATTERN =
-    /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
-
+  # a run without a saved folder uses the default storage root
   def self.for_run(run)
-    if run.storage_root.present?
-      return new(root: BackupDirectory.server.resolve!(run.storage_root))
-    end
-
-    return new if run.backup_subdirectory.blank?
-
-    # Saved relative to the global root so remounting storage preserves paths.
-    directory = BackupDirectory.for_user(run.device.user)
-    path = directory.resolve!(default_root.realpath.join(run.backup_subdirectory).to_s)
-    new(root: path)
+    run.storage_root.present? ? new(root: BackupDirectory.resolve!(run.storage_root)) : new
   end
 
   def self.default_root
@@ -67,22 +55,16 @@ class BackupStorage
 
   attr_reader :root, :max_bytes
 
-  def initialize(root: self.class.default_root, max_bytes: self.class.default_max_bytes, uuid_generator: SecureRandom.method(:uuid))
+  def initialize(root: self.class.default_root, max_bytes: self.class.default_max_bytes)
     @root = Pathname(root).expand_path
     @max_bytes = max_bytes
-    @uuid_generator = uuid_generator
   end
 
   # Streams io to disk while hashing it, then creates the BackupFile row.
   # The data goes to a .partial file first and is published only once complete,
   # so a crash mid-write never leaves a file that looks finished.
   def store(io, backup_run:, original_filename:)
-    uuid = @uuid_generator.call
-
-    # only allow the UUID format phonevault generates for stored files
-    unless uuid.match?(UUID_PATTERN)
-      raise Error, "invalid generated storage filename"
-    end
+    uuid = SecureRandom.uuid
 
     # verify the backup run directory before writing anything to disk
     folder = "#{safe_component(backup_run.device.name, limit: 80).gsub(/\s+/, "-")}-Backups"
@@ -180,13 +162,9 @@ class BackupStorage
     storage_path = backup_file.storage_path.to_s
     parts = storage_path.split("/", -1)
 
-    legacy_path = parts.length == 2 &&
-      parts.first == backup_file.backup_run_id.to_s && parts.last.match?(UUID_PATTERN)
-    readable_path = parts.length == 2 && parts.first.end_with?("-Backups") &&
+    valid = parts.length == 2 && parts.first.end_with?("-Backups") &&
       parts.all? { |part| safe_path_component?(part) }
-    valid_storage_path = legacy_path || readable_path
-
-    unless valid_storage_path
+    unless valid
       raise Error, "invalid storage path for backup file #{backup_file.id}"
     end
 

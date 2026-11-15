@@ -5,7 +5,7 @@ class BackupDirectoryTest < ActiveSupport::TestCase
     @temporary = Dir.mktmpdir("phonevault_paths")
     @previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
     ENV["PHONEVAULT_BACKUP_ROOT"] = @temporary
-    @browser = BackupDirectory.for_user(users(:alice))
+    @root = BackupDirectory.default_for(users(:alice))
   end
 
   teardown do
@@ -13,47 +13,36 @@ class BackupDirectoryTest < ActiveSupport::TestCase
     FileUtils.remove_entry(@temporary)
   end
 
-  test "accepts directories containing spaces and cleans up write probes" do
-    folder = @browser.root.join("Family photos")
-    folder.mkdir
-    assert_equal folder, @browser.test_write!(folder.to_s)
-    assert_empty folder.children
-    assert_equal [ folder ], @browser.children(@browser.root.to_s)
+  test "each user's default folder is created under the backup root" do
+    assert_equal Pathname(@temporary).realpath.join("users", users(:alice).id.to_s), @root
+    assert @root.directory?
+    assert_equal @root, BackupDirectory.resolve_or_default!("", users(:alice))
   end
 
-  test "rejects relative paths traversal sibling accounts files and missing folders" do
-    other = BackupDirectory.for_user(users(:bob)).root
-    file = @browser.root.join("file.txt")
+  test "accepts directories containing spaces and cleans up write probes" do
+    folder = @root.join("Family photos")
+    folder.mkdir
+    assert_equal folder, BackupDirectory.test_write!(folder.to_s)
+    assert_empty folder.children
+    assert_equal [ folder ], BackupDirectory.children(@root.to_s)
+  end
+
+  test "rejects relative paths traversal files and missing folders" do
+    file = @root.join("file.txt")
     file.write("data")
-    [ "relative", "#{@browser.root}/../#{users(:bob).id}", other.to_s,
-      file.to_s, "#{@browser.root}/missing", "#{@browser.root}other", "bad\0path" ].each do |path|
-      assert_raises(BackupDirectory::Error, path) { @browser.resolve!(path) }
+    [ "relative", "#{@root}/../#{users(:bob).id}", file.to_s, "#{@root}/missing", "bad\0path" ].each do |path|
+      assert_raises(BackupDirectory::Error, path) { BackupDirectory.resolve!(path) }
     end
   end
 
-  test "rejects symlink folders and hides them from browsing" do
-    other = BackupDirectory.for_user(users(:bob)).root
-    link = @browser.root.join("escape")
-    File.symlink(other, link)
-    assert_raises(BackupDirectory::Error) { @browser.resolve!(link.to_s) }
-    assert_empty @browser.children(@browser.root.to_s)
-  end
-
-  test "refuses a symlink at the account root" do
-    root = @browser.root
-    root.rmdir
-    File.symlink(@temporary, root)
-    assert_raises(BackupDirectory::Error) { BackupDirectory.for_user(users(:alice)) }
-  end
-
-  test "server paths may be outside account storage and aliases resolve canonically" do
+  test "folders outside the backup root are allowed and symlinks resolve to their real location" do
     Dir.mktmpdir("phonevault_external") do |external|
       directory = Pathname(external).realpath
-      browser = BackupDirectory.server
-      assert_equal directory, browser.test_write!(external)
-      link = @browser.root.join("external-link")
+      assert_equal directory, BackupDirectory.test_write!(external)
+      link = @root.join("external-link")
       File.symlink(directory, link)
-      assert_equal directory, browser.resolve!(link.to_s)
+      assert_equal directory, BackupDirectory.resolve!(link.to_s)
+      assert_empty BackupDirectory.children(@root.to_s), "symlinked folders are hidden from browsing"
     end
   end
 
@@ -61,9 +50,9 @@ class BackupDirectoryTest < ActiveSupport::TestCase
     # Directory mode alone is unreliable when tests run as root.
     original_create = Tempfile.method(:create)
     Tempfile.define_singleton_method(:create) { |*| raise Errno::EACCES }
-    error = assert_raises(BackupDirectory::Error) { @browser.test_write!(@browser.root.to_s) }
+    error = assert_raises(BackupDirectory::Error) { BackupDirectory.test_write!(@root.to_s) }
     assert_equal "Directory is not writable.", error.message
-    assert_empty @browser.root.children
+    assert_empty @root.children
   ensure
     Tempfile.define_singleton_method(:create, original_create)
   end

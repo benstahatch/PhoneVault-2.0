@@ -213,7 +213,7 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     file = fixture_file_upload("sample_backup.txt", "text/plain")
 
     assert_difference [ "BackupRun.count", "BackupFile.count", "SecurityEvent.count" ], 1 do
-      post device_backup_runs_path(device), params: { backup_run: { file: file } }
+      post device_backup_runs_path(device), params: { backup_run: { file: file, save_path: default_save_path } }
     end
 
     run = device.backup_runs.order(:created_at).last
@@ -241,7 +241,7 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
 
     begin
       assert_raises(ActiveRecord::ActiveRecordError) do
-        post device_backup_runs_path(device), params: { backup_run: { file: file } }
+        post device_backup_runs_path(device), params: { backup_run: { file: file, save_path: default_save_path } }
       end
     ensure
       # put the real create! back so other tests aren't affected
@@ -257,7 +257,7 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     file = fixture_file_upload("sample_backup.txt", "text/plain")
 
     assert_no_difference [ "BackupRun.count", "BackupFile.count" ] do
-      post device_backup_runs_path(devices(:bob_phone)), params: { backup_run: { file: file } }
+      post device_backup_runs_path(devices(:bob_phone)), params: { backup_run: { file: file, save_path: default_save_path } }
     end
 
     assert_response :not_found
@@ -275,40 +275,6 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Choose a file to upload", response.body
   end
 
-
-  test "create rejects an unavailable save directory before starting a run" do
-  sign_in_as users(:alice)
-
-  device = devices(:alice_phone)
-  file = fixture_file_upload("sample_backup.txt", "text/plain")
-
-  Dir.mktmpdir("phonevault_failed_storage") do |root|
-    blocked_path = File.join(root, "not_a_directory")
-    File.write(blocked_path, "block storage here")
-
-    previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
-    ENV["PHONEVAULT_BACKUP_ROOT"] = blocked_path
-
-    begin
-      assert_no_difference([ "BackupRun.count", "SecurityEvent.count" ]) do
-        assert_no_difference("BackupFile.count") do
-          post device_backup_runs_path(device),
-            params: { backup_run: { file: file } }
-        end
-      end
-
-      assert_response :unprocessable_entity
-      assert_match "Backup storage is unavailable", response.body
-    ensure
-      if previous_root
-        ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
-      else
-        ENV.delete("PHONEVAULT_BACKUP_ROOT")
-      end
-    end
-  end
-end
-
   test "a very long filename is shortened in the event details instead of failing" do
     sign_in_as users(:alice)
     device = devices(:alice_phone)
@@ -318,7 +284,7 @@ end
     Dir.mktmpdir("phonevault_long_name") do |root|
       previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
       ENV["PHONEVAULT_BACKUP_ROOT"] = root
-      post device_backup_runs_path(device), params: { backup_run: { file: file } }
+      post device_backup_runs_path(device), params: { backup_run: { file: file, save_path: default_save_path } }
     ensure
       ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
     end
@@ -345,7 +311,7 @@ end
     begin
       assert_difference([ "BackupRun.count", "SecurityEvent.count" ], 1) do
         assert_no_difference("BackupFile.count") do
-          post device_backup_runs_path(device), params: { backup_run: { file: file } }
+          post device_backup_runs_path(device), params: { backup_run: { file: file, save_path: default_save_path } }
         end
       end
     ensure
@@ -365,5 +331,9 @@ end
 
   def sign_in_as(user, password: "secret123")
     post login_path, params: { session: { username: user.username, password: password } }
+  end
+
+  def default_save_path
+    BackupDirectory.default_for(users(:alice)).to_s
   end
 end

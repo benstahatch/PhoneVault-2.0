@@ -10,8 +10,7 @@ class BackupRunsController < ApplicationController
   def new
     @backup_run = @device.backup_runs.new
     begin
-      initial_path = params[:save_path].presence || BackupDirectory.for_user(current_user).root.to_s
-      @save_path = BackupDirectory.server.resolve!(initial_path).to_s
+      @save_path = BackupDirectory.resolve_or_default!(params[:save_path], current_user).to_s
     rescue BackupDirectory::Error => error
       @backup_run.errors.add(:base, error.message)
     end
@@ -28,9 +27,7 @@ class BackupRunsController < ApplicationController
     end
 
     begin
-      # Older clients can omit the new field; an explicitly blank path is invalid.
-      @save_path = BackupDirectory.for_user(current_user).root.to_s unless attributes.key?(:save_path)
-      destination = BackupDirectory.server.test_write!(@save_path)
+      destination = BackupDirectory.test_write!(@save_path)
     rescue BackupDirectory::Error => error
       @backup_run = @device.backup_runs.new
       @backup_run.errors.add(:base, error.message)

@@ -4,7 +4,7 @@
   <p class="text-sm text-neutral-600">Browse server folders and select an existing writable directory. In Docker, only mounted folders are available. Select a folder, then choose the file to upload.</p>
   <div class="flex flex-wrap gap-3 my-4">
     <%= link_to "Use this folder", new_device_backup_run_path(@device, save_path: @path.to_s), class: button_classes %>
-    <% unless @path == @root %>
+    <% unless @path.root? %>
       <%= link_to "Up", directories_device_backup_location_path(@device, path: @path.parent.to_s), class: button_classes(:secondary) %>
     <% end %>
     <%= link_to "Cancel", new_device_backup_run_path(@device), class: button_classes(:secondary) %>

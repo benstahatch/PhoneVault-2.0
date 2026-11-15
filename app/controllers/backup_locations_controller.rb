@@ -3,16 +3,14 @@ class BackupLocationsController < ApplicationController
   rescue_from BackupDirectory::Error, with: :directory_error
 
   def directories
-    browser = BackupDirectory.server
-    @root = browser.root
-    @path = browser.resolve!(params[:path].presence || BackupDirectory.for_user(current_user).root.to_s)
-    @directories = browser.children(@path)
+    @path = BackupDirectory.resolve_or_default!(params[:path], current_user)
+    @directories = BackupDirectory.children(@path)
     respond_to do |format|
       format.html
       format.json do
         render json: {
           path: @path.to_s,
-          parent: @path == @root ? nil : @path.parent.to_s,
+          parent: (@path.parent.to_s unless @path.root?),
           directories: @directories.map { |directory| { name: directory.basename.to_s, path: directory.to_s } }
         }
       end
@@ -20,8 +18,7 @@ class BackupLocationsController < ApplicationController
   end
 
   def validate_path
-    browser = BackupDirectory.server
-    path = browser.test_write!(params[:path])
+    path = BackupDirectory.test_write!(params[:path])
     render json: { message: "Directory exists and is writable.", path: path.to_s }
   end
 

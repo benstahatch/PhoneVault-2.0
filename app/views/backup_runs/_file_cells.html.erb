@@ -33,8 +33,8 @@
       <% end %>
     </div>
   </div>
-  <% if run.storage_root.present? || run.backup_subdirectory.present? %>
-    <p class="text-sm break-all">Save folder: <code><%= run.storage_root.presence || BackupStorage.default_root.join(run.backup_subdirectory) %></code></p>
+  <% if run.storage_root.present? %>
+    <p class="text-sm break-all">Save folder: <code><%= run.storage_root %></code></p>
   <% end %>
   <details>
     <summary>SHA-256 details</summary>

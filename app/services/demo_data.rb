@@ -64,7 +64,6 @@ class DemoData
             FileUtils.rm_f(@storage.root.join(file.storage_path))
             file.destroy!
           end
-          FileUtils.rm_rf(@storage.root.join(run.id.to_s))
           run.reload.destroy!
         end
         device.reload.destroy!
