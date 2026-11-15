@@ -57,20 +57,16 @@ class DemoData
     user = User.find_by(username: USERNAME)
     return false unless user
 
+    # child rows first: every association restricts deleting a parent that still has children
     ActiveRecord::Base.transaction do
-      user.devices.each do |device|
-        device.backup_runs.each do |run|
-          run.backup_files.each do |file|
-            FileUtils.rm_f(@storage.root.join(file.storage_path))
-            file.destroy!
-          end
-          run.reload.destroy!
-        end
-        device.reload.destroy!
-      end
-      # the demo's activity is made up, so it goes with the account
-      user.security_events.delete_all
-      user.reload.destroy!
+      files = user.backup_files.to_a
+      files.each { |file| FileUtils.rm_f(@storage.root.join(file.storage_path)) }
+      BackupFile.where(id: files).delete_all
+      BackupRun.where(id: user.backup_runs.ids).delete_all
+      Device.where(user: user).delete_all
+      # the demo's activity is made up, so it goes with the account (user.security_events.delete_all would only nullify)
+      SecurityEvent.where(user: user).delete_all
+      user.destroy!
     end
     true
   end

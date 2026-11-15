@@ -75,13 +75,14 @@ class DemoDataTest < ActiveSupport::TestCase
   end
 
   test "reset removes the demo account, its records, and its stored files" do
+    events_before = SecurityEvent.count
     user = @demo.create.user
-    paths = BackupFile.joins(backup_run: :device).where(devices: { user_id: user.id }).map { |file| @storage.path_for(file) }
+    paths = user.backup_files.map { |file| @storage.path_for(file) }
 
     assert @demo.reset
 
     assert_nil User.find_by(username: "demo")
-    assert_equal 0, SecurityEvent.where(user_id: user.id).count
+    assert_equal events_before, SecurityEvent.count, "demo events are deleted, not left behind without a user"
     assert_equal 0, Device.where(user_id: user.id).count
     paths.each { |path| assert_not File.exist?(path) }
   end
