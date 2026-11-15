@@ -44,7 +44,15 @@
 </td>
 <td><%= number_to_human_size(file.size_bytes) %></td>
 <td>
-  <%= link_to "Restore", restore_device_backup_run_backup_file_path(@device, run, file),
-    class: button_classes(:secondary, size: :small), data: { turbo: false },
-    aria: { label: "Restore #{file.original_filename}" } %>
+  <div class="flex flex-wrap gap-2">
+    <%= link_to "Restore", restore_device_backup_run_backup_file_path(@device, run, file),
+      class: button_classes(:secondary, size: :small), data: { turbo: false },
+      aria: { label: "Restore #{file.original_filename}" } %>
+    <%= button_to "Delete",
+      device_backup_run_backup_file_path(@device, run, file),
+      method: :delete,
+      form: { data: { turbo_confirm: "Move #{file.original_filename} to Trash?" } },
+      class: button_classes(:secondary, size: :small),
+      aria: { label: "Delete #{file.original_filename}" } %>
+  </div>
 </td>

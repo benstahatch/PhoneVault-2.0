@@ -23,12 +23,12 @@
           <th scope="col">Status</th>
           <th scope="col">File</th>
           <th scope="col">Size</th>
-          <th scope="col">Restore</th>
+          <th scope="col">Actions</th>
         </tr>
       </thead>
       <tbody>
         <% @backup_runs.each do |run| %>
-          <% files = run.backup_files.to_a %>
+          <% files = run.active_backup_files.to_a %>
           <tr>
             <td rowspan="<%= [files.size, 1].max %>">
               <div>Created: <%= tag.time(run.created_at.strftime("%b %d, %Y %H:%M %Z"), datetime: run.created_at.iso8601) %></div>
@@ -43,7 +43,13 @@
               <span class="backup-status backup-status--<%= run.status %>"><%= run.status.humanize %></span>
             </td>
             <% if files.empty? %>
-              <td colspan="3"><%= run.failed? ? "Backup failed. No files were stored." : "No files stored yet." %></td>
+              <td colspan="3"><%= if run.failed?
+                "Backup failed. No files were stored."
+              elsif run.completed?
+                "No active files. Deleted backups remain in Trash."
+              else
+                "No files stored yet."
+              end %></td>
             <% else %>
               <%= render "file_cells", file: files.first, run: run %>
             <% end %>
