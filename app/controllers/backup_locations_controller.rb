@@ -1,5 +1,5 @@
 class BackupLocationsController < ApplicationController
-  before_action :set_device
+  include DeviceScoped
   rescue_from BackupDirectory::Error, with: :directory_error
 
   def directories
@@ -26,10 +26,6 @@ class BackupLocationsController < ApplicationController
   end
 
   private
-
-  def set_device
-    @device = current_user.devices.find(params[:device_id])
-  end
 
   def directory_error(error)
     if action_name == "validate_path" || request.format.json?

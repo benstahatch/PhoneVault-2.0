@@ -1,5 +1,5 @@
 class BackupRunsController < ApplicationController
-  before_action :set_device
+  include DeviceScoped
 
   def index
     runs = @device.backup_runs.includes(:active_backup_files).order(created_at: :desc, id: :desc).to_a
@@ -65,11 +65,5 @@ class BackupRunsController < ApplicationController
     record_security_event("BACKUP_SUCCESS", current_user, subject: backup_file,
       details: "#{backup_file.original_filename} to #{@device.name}")
     redirect_to device_backup_runs_path(@device), notice: "File uploaded successfully. Backup completed."
-  end
-
-  private
-
-  def set_device
-    @device = current_user.devices.find(params[:device_id])
   end
 end

@@ -16,8 +16,7 @@ class RegistrationsController < ApplicationController
     @user = User.new(user_params)
 
     if @user.save
-      reset_session
-      session[:user_id] = @user.id
+      start_session(@user)
       record_security_event("ACCOUNT_CREATED", @user)
 
       redirect_to dashboard_path, notice: "Account created successfully."

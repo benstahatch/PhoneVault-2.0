@@ -1,6 +1,5 @@
 class BackupFilesController < ApplicationController
-  before_action :set_device
-  before_action :set_backup_run
+  include DeviceScoped
   before_action :set_backup_file
 
   rescue_from BackupDirectory::Error do |error|
@@ -58,18 +57,9 @@ end
     "#{@backup_file.original_filename} from #{@device.name}"
   end
 
-  def set_device
-    # only find devices owned by the logged-in user
-    @device = current_user.devices.find(params[:device_id])
-  end
-
-  def set_backup_run
-    # only find backup runs belonging to this device
-    @backup_run = @device.backup_runs.find(params[:backup_run_id])
-  end
-
+  # each lookup is scoped to the one before it: user → device → run → active file
   def set_backup_file
-    # only find files belonging to this backup run
+    @backup_run = @device.backup_runs.find(params[:backup_run_id])
     @backup_file = @backup_run.backup_files.active.find(params[:id])
   end
 
