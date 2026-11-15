@@ -12,7 +12,8 @@ class DevicesController < ApplicationController
     @device = current_user.devices.new(device_params)
 
     if @device.save
-      record_security_event("DEVICE_REGISTERED", current_user)
+      record_security_event("DEVICE_REGISTERED", current_user, subject: @device,
+        details: "#{@device.name} (#{@device.device_type.humanize.downcase})")
       redirect_to devices_path, notice: "Device registered successfully."
     else
       render :new, status: :unprocessable_entity
@@ -25,10 +26,11 @@ class DevicesController < ApplicationController
 
   def update
     @device = find_device
+    old_name = @device.name
 
     # only the name can change; the device type stays what it was registered as
     if @device.update(params.expect(device: %i[name]))
-      record_security_event("DEVICE_RENAMED", current_user)
+      record_security_event("DEVICE_RENAMED", current_user, subject: @device, details: "#{old_name} → #{@device.name}")
       redirect_to devices_path, notice: "Device renamed to #{@device.name}."
     else
       render :edit, status: :unprocessable_entity

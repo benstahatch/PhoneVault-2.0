@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
   get "login", to: "sessions#new", as: :login
   get "dashboard", to: "dashboard#show", as: :dashboard
+  get "activity", to: "activity#index", as: :activity
   get "signup", to: "registrations#new", as: :signup
   post "signup", to: "registrations#create"
   post "login", to: "sessions#create"
