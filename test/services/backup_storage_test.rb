@@ -146,6 +146,29 @@ end
     end
   end
 
+  test "path validation rejects a symlink even when it points inside the storage root" do
+    directory = @storage.root.join("Alice-Pixel-Backups")
+    directory.mkdir
+    target = @storage.root.join("other-file.txt")
+    File.write(target, "not the tracked backup")
+    File.symlink(target, directory.join("linked.txt"))
+    file = BackupFile.new(backup_run: @run, storage_path: "Alice-Pixel-Backups/linked.txt")
+
+    assert_raises(BackupStorage::Error) { @storage.path_for(file) }
+    assert_equal "not the tracked backup", File.read(target)
+  end
+
+  test "permanent deletion requires the exact stored bytes to match the record" do
+    file = @storage.store(StringIO.new("original bytes"), backup_run: @run, original_filename: "photo.jpg")
+    path = @storage.path_for(file)
+    File.binwrite(path, "changed bytes")
+
+    assert_raises(BackupStorage::CorruptedFile) { @storage.permanently_delete(file) }
+    assert File.file?(path)
+    assert_equal "changed bytes", File.binread(path)
+    assert_equal file, BackupFile.find(file.id)
+  end
+
   test "device renames do not break existing backup paths" do
     first = @storage.store(StringIO.new("first"), backup_run: @run, original_filename: "photo.jpeg")
     @run.device.update!(name: "Benji")

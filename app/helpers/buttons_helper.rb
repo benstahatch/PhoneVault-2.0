@@ -9,7 +9,9 @@ module ButtonsHelper
     # dark button for the main action on a page
     primary: "border-0 bg-[#171717] text-white hover:bg-[#e66b00] hover:text-white",
     # white outlined button for secondary actions like "Back"
-    secondary: "border border-neutral-300 bg-white text-neutral-900 hover:border-[#e66b00] hover:text-[#c45a00]"
+    secondary: "border border-neutral-300 bg-white text-neutral-900 hover:border-[#e66b00] hover:text-[#c45a00]",
+    # red button for an irreversible action
+    danger: "border border-red-700 bg-red-700 text-white hover:border-red-800 hover:bg-red-800"
   }.freeze
 
   BUTTON_SIZES = {

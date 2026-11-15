@@ -21,7 +21,7 @@
           <th scope="col">Device</th>
           <th scope="col">Size</th>
           <th scope="col">Deleted</th>
-          <th scope="col">Action</th>
+          <th scope="col">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -32,12 +32,20 @@
             <td><%= number_to_human_size(file.size_bytes) %></td>
             <td><%= tag.time(file.deleted_at.strftime("%b %d, %Y %H:%M %Z"), datetime: file.deleted_at.iso8601) %></td>
             <td>
-              <%= button_to "Restore",
-                restore_trash_path(file),
-                method: :patch,
-                form: { data: { turbo_confirm: "Restore #{file.original_filename} to backup history?" } },
-                class: button_classes(:secondary, size: :small),
-                aria: { label: "Restore #{file.original_filename}" } %>
+              <div class="flex flex-wrap gap-2">
+                <%= button_to "Restore",
+                  restore_trash_path(file),
+                  method: :patch,
+                  form: { data: { turbo_confirm: "Restore #{file.original_filename} to backup history?" } },
+                  class: button_classes(:secondary, size: :small),
+                  aria: { label: "Restore #{file.original_filename}" } %>
+                <%= button_to "Delete Permanently",
+                  permanently_delete_trash_path(file),
+                  method: :delete,
+                  form: { data: { turbo_confirm: "Permanently delete #{file.original_filename} from PhoneVault storage? This cannot be undone." } },
+                  class: button_classes(:danger, size: :small),
+                  aria: { label: "Delete #{file.original_filename} permanently" } %>
+              </div>
             </td>
           </tr>
         <% end %>

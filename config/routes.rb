@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   delete "logout", to: "sessions#destroy", as: :logout
   get "trash", to: "trash#index", as: :trash
   patch "trash/:id/restore", to: "trash#restore", as: :restore_trash
+  delete "trash/:id", to: "trash#destroy", as: :permanently_delete_trash
 
 
 resources :devices, only: %i[index new create edit update] do
