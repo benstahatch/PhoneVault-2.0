@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_15_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_15_170000) do
   create_table "backup_files", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "backup_run_id", null: false
     t.datetime "created_at", null: false
@@ -67,6 +67,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_15_010000) do
     t.string "password_digest", null: false
     t.datetime "updated_at", null: false
     t.string "username", limit: 50, null: false
+    t.integer "trash_retention_days"
+    t.index ["trash_retention_days"], name: "index_users_on_trash_retention_days"
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 

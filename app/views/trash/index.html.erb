@@ -5,11 +5,22 @@
   <p role="alert" class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800"><%= flash[:alert] %></p>
 <% end %>
 
-<h1 class="mb-6 text-3xl font-bold text-neutral-900">Trash</h1>
+<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="m-0 text-3xl font-bold text-neutral-900">Trash</h1>
+  <%= link_to "Retention Settings", trash_retention_settings_path, class: button_classes(:secondary) %>
+</div>
+
+<% unless @automatic_cleanup_enabled %>
+  <p role="status" class="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+    Server-level automatic cleanup is disabled. Your retention preference is <%= @retention_days ? "#{@retention_days} days" : "Never" %>; files will not be automatically deleted unless the server administrator enables cleanup.
+  </p>
+<% end %>
 
 <div class="mb-6 flex flex-wrap gap-3">
   <%= link_to "Back to devices", devices_path, class: button_classes(:secondary) %>
 </div>
+
+<h2 class="mb-4 text-2xl font-semibold text-neutral-900">Recently Deleted</h2>
 
 <% if @backup_files.any? %>
   <div class="backup-history-scroll" role="region" aria-label="Trashed backups" tabindex="0">
@@ -21,6 +32,7 @@
           <th scope="col">Device</th>
           <th scope="col">Size</th>
           <th scope="col">Deleted</th>
+          <th scope="col"><%= @automatic_cleanup_enabled ? "Expiration" : "Eligibility" %></th>
           <th scope="col">Actions</th>
         </tr>
       </thead>
@@ -31,6 +43,27 @@
             <td><%= file.backup_run.device.name %></td>
             <td><%= number_to_human_size(file.size_bytes) %></td>
             <td><%= tag.time(file.deleted_at.strftime("%b %d, %Y %H:%M %Z"), datetime: file.deleted_at.iso8601) %></td>
+            <td>
+              <% if @retention_days.nil? %>
+                <strong>Never</strong>
+              <% else %>
+                <% expiration_at = TrashRetention.expiration_at(file.deleted_at, @retention_days) %>
+                <% days_remaining = [ (expiration_at.to_date - Time.zone.today).to_i, 0 ].max %>
+                <% if @automatic_cleanup_enabled %>
+                  <strong>Expires in <%= pluralize(days_remaining, "day") %></strong>
+                  <br>
+                  <%= tag.time(expiration_at.strftime("%b %d, %Y %H:%M %Z"), datetime: expiration_at.iso8601) %>
+                  <% if expiration_at <= Time.current %>
+                    <span class="block text-sm text-neutral-600">Past expiry; awaiting scheduled cleanup.</span>
+                  <% end %>
+                <% else %>
+                  <strong>Eligible on</strong>
+                  <br>
+                  <%= tag.time(expiration_at.strftime("%b %d, %Y %H:%M %Z"), datetime: expiration_at.iso8601) %>
+                  <span class="block text-sm text-neutral-600"><%= days_remaining.positive? ? "Eligible in #{pluralize(days_remaining, 'day')} if server cleanup is enabled." : "Past eligibility date; automatic cleanup is disabled." %></span>
+                <% end %>
+              <% end %>
+            </td>
             <td>
               <div class="flex flex-wrap gap-2">
                 <%= button_to "Restore",

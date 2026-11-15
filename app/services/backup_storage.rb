@@ -168,7 +168,7 @@ class BackupStorage
     raise Error, "Tracked backup path is not a regular file" unless stat.file?
     raise CorruptedFile, "backup file #{backup_file.id} failed integrity verification" unless verify(backup_file) == :ok
 
-    File.unlink(path)
+    unlink_file(path)
     path
   rescue Errno::ENOENT
     raise MissingFile, "backup file #{backup_file.id} is missing from storage"
@@ -222,6 +222,10 @@ class BackupStorage
   end
 
   private
+
+  def unlink_file(path)
+    File.unlink(path)
+  end
 
   def safe_component(value, limit:)
     name = ActiveStorage::Filename.new(value.to_s).sanitized

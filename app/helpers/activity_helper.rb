@@ -11,6 +11,7 @@ module ActivityHelper
     "BACKUP_SUCCESS" => "Backed up a file",
     "BACKUP_FAILED" => "Backup failed",
     "FILE_RESTORED" => "Restored a file",
+    "FILE_PERMANENTLY_DELETED" => "Permanently deleted a file",
     "RESTORE_FILE_MISSING" => "Restore failed: file missing",
     "RESTORE_FILE_CORRUPTED" => "Restore failed: file did not pass its check"
   }.freeze

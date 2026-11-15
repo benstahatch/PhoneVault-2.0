@@ -1,0 +1,33 @@
+<h1 class="mb-3 text-3xl font-bold text-neutral-900">Retention Settings</h1>
+<p class="mb-6 max-w-3xl text-neutral-600">
+  Choose how long deleted backups stay in Trash. Expiration is calculated from the deletion date.
+  Never is selected by default and keeps files until you restore or permanently delete them.
+</p>
+
+<% unless @automatic_cleanup_enabled %>
+  <p role="status" class="mb-6 max-w-3xl rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+    Server-level automatic cleanup is disabled. You can save a retention preference, but no files will be automatically deleted until the server administrator enables cleanup.
+  </p>
+<% end %>
+
+<section class="max-w-3xl rounded-xl border border-neutral-200 bg-white p-6">
+  <%= form_with url: confirm_trash_retention_settings_path, method: :post, data: {turbo: false } do |form| %>
+    <div class="mb-6">
+      <%= form.label :trash_retention_days, "Keep deleted backups for", class: "mb-2 block font-semibold text-neutral-900" %>
+      <%= form.select :trash_retention_days,
+        options_for_select([
+          [ "Never (keep files until manually deleted)", "" ],
+          [ "30 days (recommended)", "30" ],
+          [ "60 days", "60" ],
+          [ "90 days", "90" ]
+        ], @retention_days&.to_s || ""),
+        {},
+        class: "block w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900" %>
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+      <%= form.submit "Continue", class: button_classes %>
+      <%= link_to "Back to Trash", trash_path, class: button_classes(:secondary) %>
+    </div>
+  <% end %>
+</section>

@@ -4,6 +4,8 @@ class TrashController < ApplicationController
       .includes(backup_run: :device)
       .order(deleted_at: :desc, id: :desc)
       .load
+    @retention_days = current_user.trash_retention_days
+    @automatic_cleanup_enabled = TrashRetention.cleanup_enabled?
   end
 
   def restore

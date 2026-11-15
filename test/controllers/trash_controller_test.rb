@@ -3,8 +3,10 @@ require "test_helper"
 class TrashControllerTest < ActionDispatch::IntegrationTest
   setup do
     @previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+    @previous_cleanup_enabled = ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"]
     @root = Dir.mktmpdir("phonevault_trash_page")
     ENV["PHONEVAULT_BACKUP_ROOT"] = @root
+    ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "false"
     @device = devices(:alice_phone)
     @run = @device.backup_runs.create!(status: :completed, storage_root: @root)
     @file = upload(@run, "family-photo.jpg", "image bytes")
@@ -13,6 +15,7 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
 
   teardown do
     @previous_root ? ENV["PHONEVAULT_BACKUP_ROOT"] = @previous_root : ENV.delete("PHONEVAULT_BACKUP_ROOT")
+    @previous_cleanup_enabled ? ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = @previous_cleanup_enabled : ENV.delete("PHONEVAULT_TRASH_CLEANUP_ENABLED")
     FileUtils.remove_entry(@root)
   end
 
@@ -29,10 +32,13 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h1", text: "Trash"
+    assert_select "h2", text: "Recently Deleted"
+    assert_select "a[href=?]", trash_retention_settings_path, text: "Retention Settings"
     assert_select "tbody tr", count: 1
     assert_select "tbody tr td:nth-child(1)", text: "family-photo.jpg"
     assert_select "tbody tr td:nth-child(2)", text: @device.name
     assert_select "tbody tr td:nth-child(3)", text: "11 Bytes"
+    assert_select "tbody tr td:nth-child(5)", text: "Never"
     assert_select "time[datetime=?]", @file.deleted_at.iso8601
     assert_select "form[action=?][data-turbo-confirm=?]",
       restore_trash_path(@file), "Restore family-photo.jpg to backup history?"
@@ -40,6 +46,39 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
       permanently_delete_trash_path(@file),
       "Permanently delete family-photo.jpg from PhoneVault storage? This cannot be undone."
     assert_no_match "bob-secret.txt", response.body
+  end
+
+  test "trash shows exact expiration and server-disabled notice for a saved period" do
+    sign_in_as users(:alice)
+    users(:alice).update!(trash_retention_days: 30)
+    deleted_at = Time.zone.now.beginning_of_day - 5.days + 10.hours
+    @file.update!(deleted_at: deleted_at)
+
+    get trash_path
+
+    assert_response :success
+    assert_match "Server-level automatic cleanup is disabled", response.body
+    assert_match "Your retention preference is 30 days", response.body
+    assert_select "tbody tr td:nth-child(5) strong", text: "Eligible on"
+    assert_select "tbody tr td:nth-child(5)", text: /Eligible in 25 days/
+    assert_no_match "Expires in 25 days", response.body
+    assert_select "tbody tr td:nth-child(5) time[datetime=?]", (deleted_at + 30.days).iso8601
+  end
+
+  test "trash uses expiration wording when server cleanup is enabled" do
+    ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
+    sign_in_as users(:alice)
+    users(:alice).update!(trash_retention_days: 30)
+    deleted_at = Time.zone.now.beginning_of_day - 5.days + 10.hours
+    @file.update!(deleted_at: deleted_at)
+
+    get trash_path
+
+    assert_response :success
+    assert_select "thead th", text: "Expiration"
+    assert_select "tbody tr td:nth-child(5) strong", text: "Expires in 25 days"
+    assert_select "tbody tr td:nth-child(5) time[datetime=?]", (deleted_at + 30.days).iso8601
+    assert_no_match "Eligible on", response.body
   end
 
   test "trash page explains when it is empty" do
@@ -173,22 +212,22 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
 
   test "permanent deletion keeps the record when filesystem unlink fails" do
     sign_in_as users(:alice)
-    original_unlink = File.method(:unlink)
+    path = BackupStorage.for_run(@run).path_for(@file)
+    directory = path.dirname
+    directory_mode = File.stat(directory).mode & 0o777
+    File.chmod(directory_mode & ~0o222, directory)
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
-      File.define_singleton_method(:unlink) { |path| raise Errno::EACCES, path.to_s }
-      begin
-        delete permanently_delete_trash_path(@file)
-      ensure
-        File.define_singleton_method(:unlink, original_unlink)
-      end
+      delete permanently_delete_trash_path(@file)
     end
 
     assert_redirected_to trash_path
     assert_match "could not be deleted", flash[:alert]
     assert_match "record was kept", flash[:alert]
     assert @file.reload.deleted_at.present?
-    assert File.file?(BackupStorage.for_run(@run).path_for(@file))
+    assert File.file?(path)
+  ensure
+    File.chmod(directory_mode, directory) if directory && directory_mode
   end
 
   private

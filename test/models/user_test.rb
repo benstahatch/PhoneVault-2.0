@@ -7,6 +7,25 @@ class UserTest < ActiveSupport::TestCase
     assert user.valid?, user.errors.full_messages.join(", ")
   end
 
+  test "new users default to never automatically deleting Trash files" do
+    user = User.new(username: "retentionuser", display_name: "Retention User", password: "secret123")
+
+    assert_nil user.trash_retention_days
+    assert user.valid?, user.errors.full_messages.join(", ")
+  end
+
+  test "users can select only supported Trash retention periods or Never" do
+    user = users(:alice)
+    [ nil, 30, 60, 90 ].each do |days|
+      user.trash_retention_days = days
+      assert user.valid?, "expected #{days.inspect} to be accepted"
+    end
+
+    user.trash_retention_days = 7
+    assert_not user.valid?
+    assert user.errors[:trash_retention_days].any?
+  end
+
   test "a username is required" do
     user = User.new(display_name: "No Name", password: "secret123")
     assert_not user.valid?

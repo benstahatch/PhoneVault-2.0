@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  TRASH_RETENTION_DAYS = [ 30, 60, 90 ].freeze
+
   has_secure_password
 
   has_many :devices, dependent: :restrict_with_error
@@ -15,6 +17,9 @@ class User < ApplicationRecord
     validates :display_name, presence: true, length: { maximum: 100 }
     # allow_nil: password is nil on any update that isn't a password change
     validates :password, length: { minimum: 8 }, allow_nil: true
+    validates :trash_retention_days,
+      inclusion: { in: TRASH_RETENTION_DAYS },
+      allow_nil: true
 
     normalizes :username, with: ->(name) { name.strip.downcase }
 end
