@@ -22,19 +22,12 @@ class BackupStorage
     run.storage_root.present? ? new(root: BackupDirectory.resolve!(run.storage_root)) : new
   end
 
+  # PHONEVAULT_BACKUP_ROOT when set, otherwise storage/backups (tmp/storage/backups in tests)
   def self.default_root
     configured_root = ENV["PHONEVAULT_BACKUP_ROOT"]
-
     return Pathname(configured_root).expand_path if configured_root.present?
 
-    base =
-      if Rails.env.test?
-        Rails.root.join("tmp", "storage")
-      else
-        Rails.root.join("storage")
-      end
-
-    base.join("backups")
+    Rails.root.join(Rails.env.test? ? "tmp/storage" : "storage", "backups")
   end
 
   # PHONEVAULT_MAX_UPLOAD_MB sets the limit in megabytes; a bad value fails
