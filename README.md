@@ -165,8 +165,7 @@ Current schema fields:
 
 - `id` _(PK)_
 - `device_id` _(FK -> devices.id)_
-- `storage_root` _(saved absolute destination)_
-- `backup_subdirectory` _(legacy relative destination)_
+- `storage_root` _(saved absolute destination; blank means the default backup root)_
 - `status`
 - `started_at`
 - `completed_at`
