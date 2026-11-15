@@ -159,6 +159,23 @@ class BackupStorage
     path_for(backup_file)
   end
 
+  # Permanently removes one intact, PhoneVault-tracked regular file. The path
+  # validator rejects symlinks and only accepts PhoneVault's supported relative
+  # storage layouts; the size and digest must still match the database record.
+  def permanently_delete(backup_file)
+    path = path_for(backup_file)
+    stat = File.lstat(path)
+    raise Error, "Tracked backup path is not a regular file" unless stat.file?
+    raise CorruptedFile, "backup file #{backup_file.id} failed integrity verification" unless verify(backup_file) == :ok
+
+    File.unlink(path)
+    path
+  rescue Errno::ENOENT
+    raise MissingFile, "backup file #{backup_file.id} is missing from storage"
+  rescue SystemCallError => error
+    raise Error, "Unable to delete backup file from storage (#{error.class}). Check server storage permissions."
+  end
+
   # validates the stored path and makes sure it stays inside the backup root
   def path_for(backup_file)
     storage_path = backup_file.storage_path.to_s
@@ -174,25 +191,34 @@ class BackupStorage
       raise Error, "invalid storage path for backup file #{backup_file.id}"
     end
 
-    path = root.join(storage_path).expand_path
+    path = root.realpath.join(storage_path)
 
     # reject normal path traversal before touching the filesystem
-    unless root == Pathname("/") || path.to_s.start_with?("#{root}#{File::SEPARATOR}")
+    real_root = root.realpath
+    unless real_root == Pathname("/") || path.to_s.start_with?("#{real_root}#{File::SEPARATOR}")
       raise Error, "storage path for backup file #{backup_file.id} is outside the storage root"
     end
 
-    # missing files are handled later by verify
-    return path unless path.exist?
+    # Walk every component with lstat: a symlink that points elsewhere inside
+    # the root is still not a file PhoneVault can safely remove.
+    cursor = real_root
+    parts.each_with_index do |part, index|
+      cursor = cursor.join(part)
+      begin
+        stat = File.lstat(cursor)
+      rescue Errno::ENOENT, Errno::ENOTDIR
+        return path
+      end
 
-    real_root = root.realpath
-    real_path = path.realpath
-
-    # reject symlinks that resolve outside the real backup directory
-    unless real_root == Pathname("/") || real_path.to_s.start_with?("#{real_root}#{File::SEPARATOR}")
-      raise Error, "resolved storage path for backup file #{backup_file.id} is outside the storage root"
+      if stat.symlink?
+        raise Error, "symbolic links cannot be used in backup storage paths"
+      end
+      if index < parts.length - 1 && !stat.directory?
+        raise Error, "backup storage path contains a non-directory component"
+      end
     end
 
-    real_path
+    path
   end
 
   private

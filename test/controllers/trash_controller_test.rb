@@ -36,6 +36,9 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     assert_select "time[datetime=?]", @file.deleted_at.iso8601
     assert_select "form[action=?][data-turbo-confirm=?]",
       restore_trash_path(@file), "Restore family-photo.jpg to backup history?"
+    assert_select "form[action=?][data-turbo-confirm=?]",
+      permanently_delete_trash_path(@file),
+      "Permanently delete family-photo.jpg from PhoneVault storage? This cannot be undone."
     assert_no_match "bob-secret.txt", response.body
   end
 
@@ -97,6 +100,95 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to login_path
     assert_not_nil file.reload.deleted_at
+  end
+
+  test "permanent deletion removes only the tracked file and record, then rejects repeats" do
+    sign_in_as users(:alice)
+    second_file = upload(@run, "keep-this.txt", "other bytes")
+    second_file.update!(deleted_at: Time.current)
+    stored_path = BackupStorage.for_run(@run).path_for(@file)
+
+    assert_difference("BackupFile.count", -1) do
+      assert_difference("SecurityEvent.count", 1) do
+        delete permanently_delete_trash_path(@file)
+      end
+    end
+
+    assert_redirected_to trash_path
+    assert_equal "family-photo.jpg was permanently deleted.", flash[:notice]
+    assert_not File.exist?(stored_path)
+    assert_equal "other bytes", File.binread(BackupStorage.for_run(@run).path_for(second_file))
+    assert_equal "FILE_PERMANENTLY_DELETED", SecurityEvent.order(:id).last.event_type
+
+    assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
+      delete permanently_delete_trash_path(@file)
+    end
+    assert_response :not_found
+  end
+
+  test "permanent deletion cannot access another user's trashed file" do
+    file = create_other_user_trashed_file
+    stored_path = BackupStorage.for_run(file.backup_run).path_for(file)
+    sign_in_as users(:alice)
+
+    assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
+      delete permanently_delete_trash_path(file)
+    end
+
+    assert_response :not_found
+    assert_not_nil file.reload.deleted_at
+    assert File.file?(stored_path)
+  end
+
+  test "permanent deletion rejects a traversal path and preserves its record" do
+    sign_in_as users(:alice)
+    sentinel = File.join(File.dirname(@root), "phonevault-trash-sentinel-#{SecureRandom.hex(6)}")
+    File.binwrite(sentinel, "leave this alone")
+    @file.update_column(:storage_path, "../../#{File.basename(sentinel)}")
+
+    assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
+      delete permanently_delete_trash_path(@file)
+    end
+
+    assert_redirected_to trash_path
+    assert_match "record was kept", flash[:alert]
+    assert @file.reload.deleted_at.present?
+    assert_equal "leave this alone", File.binread(sentinel)
+  ensure
+    File.delete(sentinel) if sentinel && File.exist?(sentinel)
+  end
+
+  test "permanent deletion keeps the record when the stored file is missing" do
+    sign_in_as users(:alice)
+    File.delete(BackupStorage.for_run(@run).path_for(@file))
+
+    assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
+      delete permanently_delete_trash_path(@file)
+    end
+
+    assert_redirected_to trash_path
+    assert_match "missing from storage", flash[:alert]
+    assert @file.reload.deleted_at.present?
+  end
+
+  test "permanent deletion keeps the record when filesystem unlink fails" do
+    sign_in_as users(:alice)
+    original_unlink = File.method(:unlink)
+
+    assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
+      File.define_singleton_method(:unlink) { |path| raise Errno::EACCES, path.to_s }
+      begin
+        delete permanently_delete_trash_path(@file)
+      ensure
+        File.define_singleton_method(:unlink, original_unlink)
+      end
+    end
+
+    assert_redirected_to trash_path
+    assert_match "could not be deleted", flash[:alert]
+    assert_match "record was kept", flash[:alert]
+    assert @file.reload.deleted_at.present?
+    assert File.file?(BackupStorage.for_run(@run).path_for(@file))
   end
 
   private
