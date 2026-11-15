@@ -1,5 +1,6 @@
 class BackupFile < ApplicationRecord
   scope :active, -> { where(deleted_at: nil) }
+  scope :trashed, -> { where.not(deleted_at: nil) }
 
   belongs_to :backup_run
 

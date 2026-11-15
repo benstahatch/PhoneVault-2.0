@@ -5,6 +5,8 @@ Rails.application.routes.draw do
   post "signup", to: "registrations#create"
   post "login", to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
+  get "trash", to: "trash#index", as: :trash
+  patch "trash/:id/restore", to: "trash#restore", as: :restore_trash
 
 
 resources :devices, only: %i[index new create edit update] do

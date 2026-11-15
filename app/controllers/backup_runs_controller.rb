@@ -2,7 +2,8 @@ class BackupRunsController < ApplicationController
   before_action :set_device
 
   def index
-    @backup_runs = @device.backup_runs.includes(:active_backup_files).order(created_at: :desc, id: :desc).load
+    runs = @device.backup_runs.includes(:active_backup_files).order(created_at: :desc, id: :desc).to_a
+    @backup_runs = runs.reject { |run| run.completed? && run.active_backup_files.empty? }
     @preview = BackupPreview.new
   end
 

@@ -40,8 +40,26 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_no_match "gone.txt", response.body
-    assert_select "td", text: "No active files. Deleted backups remain in Trash."
+    assert_select "tbody tr", count: 0
     assert_equal trashed, BackupFile.find(trashed.id)
+  end
+
+  test "history hides completed runs with no active files but keeps failed runs" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    completed = device.backup_runs.create!(status: :completed, created_at: 2.minutes.ago)
+    completed.backup_files.create!(original_filename: "trashed-only.txt", size_bytes: 1,
+      sha256: "a" * 64, storage_path: "#{completed.id}/#{SecureRandom.uuid}", deleted_at: Time.current)
+    failed = device.backup_runs.create!(status: :failed, created_at: 1.minute.ago)
+
+    get device_backup_runs_path(device)
+
+    assert_response :success
+    assert_no_match "trashed-only.txt", response.body
+    assert_select ".backup-status--failed", text: "Failed"
+    assert_match "Backup failed. No files were stored.", response.body
+    assert_select "time[datetime=?]", completed.created_at.iso8601, count: 0
+    assert_select "time[datetime=?]", failed.created_at.iso8601
   end
 
   test "history preloads files and excludes other devices and users" do

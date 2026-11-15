@@ -9,6 +9,7 @@
 
 <div class="mb-6 flex flex-wrap gap-3">
   <%= link_to "Upload a file", new_device_backup_run_path(@device), class: button_classes %>
+  <%= link_to "Trash", trash_path, class: button_classes(:secondary) %>
   <%= link_to "Back to your devices", devices_path, class: button_classes(:secondary) %>
 </div>
 
@@ -42,13 +43,7 @@
               <span class="backup-status backup-status--<%= run.status %>"><%= run.status.humanize %></span>
             </td>
             <% if files.empty? %>
-              <td colspan="3"><%= if run.failed?
-                "Backup failed. No files were stored."
-              elsif run.completed?
-                "No active files. Deleted backups remain in Trash."
-              else
-                "No files stored yet."
-              end %></td>
+              <td colspan="3"><%= run.failed? ? "Backup failed. No files were stored." : "No files stored yet." %></td>
             <% else %>
               <%= render "file_cells", file: files.first, run: run %>
             <% end %>
