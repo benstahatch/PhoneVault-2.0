@@ -13,6 +13,10 @@ class DemoData
 
   Result = Struct.new(:user, :password, :created, keyword_init: true)
 
+  # made-up home-network addresses for the demo's activity history
+  HOME_IP = "192.168.1.42".freeze
+  UNKNOWN_IP = "192.168.1.77".freeze
+
   # each device gets backups on these many days ago; a nil file list makes a failed run
   DEVICES = [
     { name: "Jordan's iPhone", device_type: "phone", runs: [
@@ -40,7 +44,10 @@ class DemoData
 
     ActiveRecord::Base.transaction do
       user = User.create!(username: USERNAME, display_name: "Demo User", password: password)
+      log(user, "ACCOUNT_CREATED", 22.days.ago.change(hour: 20))
       DEVICES.each { |spec| create_device(user, spec) }
+      # one failed sign-in, so the activity page shows what a warning looks like
+      log(user, "LOGIN_FAILED", 3.days.ago.change(hour: 2, min: 14), ip: UNKNOWN_IP)
       Result.new(user: user, password: password, created: true)
     end
   end
@@ -62,6 +69,8 @@ class DemoData
         end
         device.reload.destroy!
       end
+      # the demo's activity is made up, so it goes with the account
+      user.security_events.delete_all
       user.reload.destroy!
     end
     true
@@ -71,6 +80,8 @@ class DemoData
 
   def create_device(user, spec)
     device = user.devices.create!(name: spec[:name], device_type: spec[:device_type])
+    log(user, "DEVICE_REGISTERED", 22.days.ago.change(hour: 20, min: 5), subject: device,
+      details: "#{device.name} (#{device.device_type})")
     spec[:runs].each { |run_spec| create_run(device, run_spec) }
   end
 
@@ -80,13 +91,20 @@ class DemoData
 
     if run_spec[:files].nil?
       run.update!(status: :failed, completed_at: started + 2.minutes)
+      log(device.user, "BACKUP_FAILED", started + 2.minutes, subject: run, details: "photos.zip to #{device.name}")
       return
     end
 
     run_spec[:files].each do |filename, kind, color|
-      @storage.store(StringIO.new(file_contents(kind, color)), backup_run: run, original_filename: filename)
+      file = @storage.store(StringIO.new(file_contents(kind, color)), backup_run: run, original_filename: filename)
+      log(device.user, "BACKUP_SUCCESS", started + 1.minute, subject: file, details: "#{filename} to #{device.name}")
     end
     run.update!(status: :completed, completed_at: started + 3.minutes)
+  end
+
+  def log(user, event_type, at, ip: HOME_IP, subject: nil, details: nil)
+    SecurityEvent.create!(user: user, event_type: event_type, ip_address: ip,
+      subject: subject, details: details, created_at: at)
   end
 
   def file_contents(kind, color)
