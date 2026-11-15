@@ -181,13 +181,16 @@ end
   end
 
   test "permanent deletion keeps its file when unlink raises a filesystem error" do
+    skip "root ignores directory permissions" if Process.uid.zero?
     file = @storage.store(StringIO.new("keep it"), backup_run: @run, original_filename: "keep.txt")
     path = @storage.path_for(file)
-    @storage.define_singleton_method(:unlink_file) { |_file_path| raise Errno::EACCES }
+    File.chmod(0o500, path.dirname) # read-only folder: unlink raises Errno::EACCES
 
     assert_raises(BackupStorage::Error) { @storage.permanently_delete(file) }
     assert_equal "keep it", File.binread(path)
     assert BackupFile.exists?(file.id)
+  ensure
+    File.chmod(0o700, path.dirname) if path
   end
 
   test "device renames do not break existing backup paths" do

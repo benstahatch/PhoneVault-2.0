@@ -38,8 +38,7 @@ class TrashRetentionJob < ApplicationJob
   end
 
   def preview(file, retention_days)
-    storage = backup_storage_for(file.backup_run)
-    verify_before_delete(storage, file)
+    BackupStorage.for_run(file.backup_run).restore(file) # raises unless the file is intact
     result(file, "would_delete", retention_days)
   rescue BackupStorage::Error, BackupDirectory::Error, SystemCallError => error
     Rails.logger.warn("Trash retention dry run skipped backup_file_id=#{file.id}: #{error.message}")
@@ -56,8 +55,7 @@ class TrashRetentionJob < ApplicationJob
       next unless User::TRASH_RETENTION_DAYS.include?(retention_days)
       next if file.deleted_at > retention_days.days.ago
 
-      storage = backup_storage_for(file.backup_run)
-      storage.permanently_delete(file)
+      BackupStorage.for_run(file.backup_run).permanently_delete(file)
 
       event = SecurityEvent.new(
         user: owner,
@@ -74,21 +72,6 @@ class TrashRetentionJob < ApplicationJob
   rescue StandardError => error
     Rails.logger.error("Trash retention failed for backup_file_id=#{file_id}; record retained when possible: #{error.class}: #{error.message}")
     { backup_file_id: file_id, status: "failed", error: error.message }
-  end
-
-  def verify_before_delete(storage, file)
-    case storage.verify(file)
-    when :ok
-      true
-    when :missing
-      raise BackupStorage::MissingFile, "backup file #{file.id} is missing from storage"
-    when :corrupted
-      raise BackupStorage::CorruptedFile, "backup file #{file.id} failed integrity verification"
-    end
-  end
-
-  def backup_storage_for(run)
-    BackupStorage.for_run(run)
   end
 
   def result(file, status, retention_days, error = nil)
