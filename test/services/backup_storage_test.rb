@@ -169,6 +169,27 @@ end
     assert_equal file, BackupFile.find(file.id)
   end
 
+  test "permanent deletion never removes a directory" do
+    directory = @storage.root.join("Alice-Pixel-Backups", "folder")
+    FileUtils.mkdir_p(directory)
+    File.write(directory.join("keep.txt"), "keep this")
+    file = BackupFile.new(backup_run: @run, storage_path: "Alice-Pixel-Backups/folder")
+
+    assert_raises(BackupStorage::Error) { @storage.permanently_delete(file) }
+    assert File.directory?(directory)
+    assert_equal "keep this", File.read(directory.join("keep.txt"))
+  end
+
+  test "permanent deletion keeps its file when unlink raises a filesystem error" do
+    file = @storage.store(StringIO.new("keep it"), backup_run: @run, original_filename: "keep.txt")
+    path = @storage.path_for(file)
+    @storage.define_singleton_method(:unlink_file) { |_file_path| raise Errno::EACCES }
+
+    assert_raises(BackupStorage::Error) { @storage.permanently_delete(file) }
+    assert_equal "keep it", File.binread(path)
+    assert BackupFile.exists?(file.id)
+  end
+
   test "device renames do not break existing backup paths" do
     first = @storage.store(StringIO.new("first"), backup_run: @run, original_filename: "photo.jpeg")
     @run.device.update!(name: "Benji")

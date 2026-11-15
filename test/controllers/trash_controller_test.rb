@@ -173,22 +173,22 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
 
   test "permanent deletion keeps the record when filesystem unlink fails" do
     sign_in_as users(:alice)
-    original_unlink = File.method(:unlink)
+    path = BackupStorage.for_run(@run).path_for(@file)
+    directory = path.dirname
+    directory_mode = File.stat(directory).mode & 0o777
+    File.chmod(directory_mode & ~0o222, directory)
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
-      File.define_singleton_method(:unlink) { |path| raise Errno::EACCES, path.to_s }
-      begin
-        delete permanently_delete_trash_path(@file)
-      ensure
-        File.define_singleton_method(:unlink, original_unlink)
-      end
+      delete permanently_delete_trash_path(@file)
     end
 
     assert_redirected_to trash_path
     assert_match "could not be deleted", flash[:alert]
     assert_match "record was kept", flash[:alert]
     assert @file.reload.deleted_at.present?
-    assert File.file?(BackupStorage.for_run(@run).path_for(@file))
+    assert File.file?(path)
+  ensure
+    File.chmod(directory_mode, directory) if directory && directory_mode
   end
 
   private

@@ -523,6 +523,8 @@ Edit `.env` and configure the database values.
 | `DB_HOST`                | `127.0.0.1` when used     | Database host for Rails                           |
 | `PHONEVAULT_BACKUP_ROOT` | Optional                  | Absolute path where backup bytes should be stored |
 | `PHONEVAULT_MAX_UPLOAD_MB` | Optional, `10240` (10 GB) | Largest upload PhoneVault will store, in MB     |
+| `PHONEVAULT_TRASH_RETENTION_DAYS` | Optional, `30` | Trash retention: `7`, `30`, `60`, or `90` days |
+| `PHONEVAULT_TRASH_CLEANUP_ENABLED` | Optional, `false` | Set to `true` to enable scheduled permanent deletion |
 
 Keep `.env` private. Do not commit real passwords or credentials.
 
@@ -549,6 +551,37 @@ Tests use their own temporary storage under:
 ```text
 tmp/storage/backups/
 ```
+
+## Automatic Trash retention
+
+PhoneVault schedules a daily Solid Queue job at 3:00 a.m. The job is disabled
+by default and removes only trashed files whose `deleted_at` is older than the
+configured retention period. Set these values in `.env` to enable it:
+
+```text
+PHONEVAULT_TRASH_CLEANUP_ENABLED=true
+PHONEVAULT_TRASH_RETENTION_DAYS=30
+```
+
+Choose `7`, `30`, `60`, or `90` days. Restart the production app after changing
+the environment. To disable automatic deletion, set
+`PHONEVAULT_TRASH_CLEANUP_ENABLED=false` (or remove it) and restart.
+
+Preview the eligible files without changing anything:
+
+```bash
+DRY_RUN=true bin/rails phonevault:trash:cleanup
+```
+
+Run cleanup manually by setting the enable flag to `true` for the command:
+
+```bash
+PHONEVAULT_TRASH_CLEANUP_ENABLED=true bin/rails phonevault:trash:cleanup
+```
+
+The job uses each backup run's configured server storage root and the same
+path, symlink, size, and SHA-256 checks as manual permanent deletion. Failed
+deletions remain in Trash and are logged for review.
 
 You can point PhoneVault at another Linux directory without changing Ruby source code.
 
