@@ -1,0 +1,31 @@
+<h1 class="mb-2 text-3xl sm:text-4xl font-bold text-neutral-900">Activity</h1>
+<p class="mb-6 mt-0 text-neutral-600">
+  Sign-ins, devices, backups, and restores on your account, newest first.
+  Times shown in <%= Time.zone.name %>.
+</p>
+
+<% if @events.any? %>
+  <ol class="m-0 list-none rounded-xl border border-neutral-200 bg-white p-0" aria-label="Account activity">
+    <% @events.each do |event| %>
+      <% warning = warning_event?(event) %>
+      <li class="flex flex-col gap-1 border-b border-neutral-200 p-4 last:border-b-0 sm:flex-row sm:items-baseline sm:gap-4 <%= "border-l-4 border-l-red-600 bg-red-50" if warning %>"
+          data-event-type="<%= event.event_type %>">
+        <%= tag.time event.created_at.strftime("%b %d, %Y %H:%M"), datetime: event.created_at.iso8601,
+              class: "shrink-0 text-sm text-neutral-600 sm:w-40" %>
+        <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
+          <%# kept on one line so no space appears before the colon %>
+          <strong class="<%= warning ? "text-red-800" : "text-neutral-900" %>"><%= event_label(event) %></strong><% if event.details.present? %><span class="text-neutral-700">: <%= event.details %></span><% end %>
+        </div>
+        <% if event.ip_address.present? %>
+          <span class="shrink-0 font-mono text-xs text-neutral-500">from <%= event.ip_address %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+
+  <% if @events.size == ActivityController::LIMIT %>
+    <p class="mt-4 text-sm text-neutral-600">Showing the latest <%= ActivityController::LIMIT %> events.</p>
+  <% end %>
+<% else %>
+  <p class="rounded-xl border border-neutral-200 bg-white p-5 text-neutral-600">No activity recorded yet.</p>
+<% end %>

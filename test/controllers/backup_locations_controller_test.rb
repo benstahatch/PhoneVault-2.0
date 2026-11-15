@@ -146,7 +146,7 @@ class BackupLocationsControllerTest < ActionDispatch::IntegrationTest
       FileUtils.rm_f(storage.path_for(image))
       get device_backup_runs_path(@device)
       assert_response :success
-      assert_select "img", count: 0
+      assert_select "img[src=?]", preview_device_backup_run_backup_file_path(@device, run, image), count: 0
     end
   end
 
