@@ -1,23 +1,15 @@
 class TrashRetentionSettingsController < ApplicationController
   def edit
-    load_settings
+    @retention_days = current_user.trash_retention_days
+    @automatic_cleanup_enabled = TrashRetention.cleanup_enabled?
   end
 
+  # Shows the files a new period would make eligible and issues a one-time confirmation token.
+  # Never, or any period while server cleanup is off, deletes nothing, so it saves right away.
   def confirm
     @retention_days = requested_retention_days
-    if @retention_days.nil?
-      current_user.update!(trash_retention_days: nil)
-      session.delete(:trash_retention_confirmation)
-      return redirect_to trashed_files_path, notice: "Trash retention is set to Never. Files stay until you restore or delete them."
-    end
+    return save_retention(@retention_days) if @retention_days.nil? || !TrashRetention.cleanup_enabled?
 
-    unless TrashRetention.cleanup_enabled?
-      current_user.update!(trash_retention_days: @retention_days)
-      session.delete(:trash_retention_confirmation)
-      return redirect_to trashed_files_path, notice: "Trash retention is set to #{@retention_days} days."
-    end
-
-    load_settings
     @eligible_files = TrashRetention.expired_files_for(current_user, @retention_days)
       .includes(backup_run: :device)
       .order(deleted_at: :asc, id: :asc)
@@ -35,52 +27,40 @@ class TrashRetentionSettingsController < ApplicationController
 
   def update
     retention_days = requested_retention_days
-    if retention_days.nil?
-      current_user.update!(trash_retention_days: nil)
-      session.delete(:trash_retention_confirmation)
-      return redirect_to trashed_files_path, notice: "Trash retention is set to Never. Files stay until you restore or delete them."
-    end
-
     confirmation = session.delete(:trash_retention_confirmation)
-    unless valid_confirmation?(confirmation, retention_days)
+    if retention_days && !valid_confirmation?(confirmation, retention_days)
       return redirect_to edit_trash_retention_settings_path,
         alert: "Review the retention warning and confirm the change before saving."
     end
 
-    current_user.update!(trash_retention_days: retention_days)
-    redirect_to trashed_files_path, notice: "Trash retention is set to #{retention_days} days."
+    save_retention(retention_days)
   rescue ArgumentError, ActiveRecord::RecordInvalid
     redirect_to edit_trash_retention_settings_path, alert: "Choose Never, 30, 60, or 90 days."
   end
 
   private
 
-  def load_settings
-    @retention_days = current_user.trash_retention_days unless defined?(@retention_days)
-    @automatic_cleanup_enabled = TrashRetention.cleanup_enabled?
+  def save_retention(days)
+    session.delete(:trash_retention_confirmation)
+    current_user.update!(trash_retention_days: days)
+    redirect_to trashed_files_path, notice: days ? "Trash retention is set to #{days} days." :
+      "Trash retention is set to Never. Files stay until you restore or delete them."
   end
 
+  # nil for Never; raises ArgumentError for anything other than a supported number of days
   def requested_retention_days
     value = params[:trash_retention_days]
     return if value.blank?
 
-    days = Integer(value, 10)
-    raise ArgumentError unless User::TRASH_RETENTION_DAYS.include?(days)
-
-    days
-  rescue TypeError
-    raise ArgumentError
+    days = Integer(value.to_s, 10)
+    User::TRASH_RETENTION_DAYS.include?(days) ? days : raise(ArgumentError)
   end
 
+  # the checkbox is ticked, and the token matches the one confirm issued to this user, for these days, within 15 minutes
   def valid_confirmation?(confirmation, retention_days)
-    return false unless params[:confirm_retention] == "1"
-    return false unless confirmation.is_a?(Hash)
-    return false unless confirmation["user_id"] == current_user.id && confirmation["days"] == retention_days
-    return false unless confirmation["expires_at"].to_i >= Time.current.to_i
-
-    submitted_token = params[:confirmation_token].to_s
-    stored_token = confirmation["token"].to_s
-    submitted_token.bytesize == stored_token.bytesize &&
-      ActiveSupport::SecurityUtils.secure_compare(submitted_token, stored_token)
+    params[:confirm_retention] == "1" && confirmation.is_a?(Hash) &&
+      confirmation["user_id"] == current_user.id && confirmation["days"] == retention_days &&
+      confirmation["expires_at"].to_i >= Time.current.to_i &&
+      ActiveSupport::SecurityUtils.secure_compare(params[:confirmation_token].to_s, confirmation["token"].to_s)
   end
 end

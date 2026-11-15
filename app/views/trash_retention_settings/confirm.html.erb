@@ -1,16 +1,9 @@
 <h1 class="mb-3 text-3xl font-bold text-neutral-900">Confirm Retention Settings</h1>
 
-<% if @automatic_cleanup_enabled %>
-  <div role="alert" class="mb-6 max-w-4xl rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
-    <p class="font-semibold">Backups will be permanently deleted after <%= @retention_days %> days in Trash.</p>
-    <p class="mt-1">The scheduled cleanup will permanently delete files that have already passed this age. This cannot be undone. Review the list before confirming.</p>
-  </div>
-<% else %>
-  <div role="status" class="mb-6 max-w-4xl rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
-    <p class="font-semibold">Server-level automatic cleanup is disabled.</p>
-    <p class="mt-1">Saving this <%= @retention_days %>-day preference will not delete files now. The files below would already be eligible if the server administrator enables scheduled cleanup.</p>
-  </div>
-<% end %>
+<div role="alert" class="mb-6 max-w-4xl rounded-lg border border-red-300 bg-red-50 p-4 text-red-900">
+  <p class="font-semibold">Backups will be permanently deleted after <%= @retention_days %> days in Trash.</p>
+  <p class="mt-1">The scheduled cleanup will permanently delete files that have already passed this age. This cannot be undone. Review the list before confirming.</p>
+</div>
 
 <section class="mb-6 max-w-4xl rounded-xl border border-neutral-200 bg-white p-6">
   <h2 class="mb-2 text-xl font-semibold text-neutral-900">Already eligible files</h2>
