@@ -13,7 +13,7 @@ resources :devices, only: %i[index new create edit update] do
     post :validate_path
   end
   resources :backup_runs, only: %i[index new create] do
-  resources :backup_files, only: [] do
+  resources :backup_files, only: [ :destroy ] do
     member do
       get :restore
       get :preview

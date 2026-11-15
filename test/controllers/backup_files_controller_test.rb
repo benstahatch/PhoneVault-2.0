@@ -180,6 +180,73 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "delete requires login" do
+    delete device_backup_run_backup_file_path(devices(:alice_phone), 1, 1)
+    assert_redirected_to login_path
+  end
+
+  test "delete soft deletes only the owner's backup and leaves the file and metadata intact" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    run = device.backup_runs.create!(status: :completed)
+    before_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+
+    Dir.mktmpdir("phonevault_trash") do |root|
+      ENV["PHONEVAULT_BACKUP_ROOT"] = root
+      begin
+        file = BackupStorage.new.store(StringIO.new("keep these bytes"),
+          backup_run: run, original_filename: "keep.txt")
+        original_hash = file.sha256
+        original_path = BackupStorage.new.path_for(file)
+        old_deleted_at = file.deleted_at
+
+        assert_no_difference "BackupFile.count" do
+          delete device_backup_run_backup_file_path(device, run, file)
+        end
+
+        assert_redirected_to device_backup_runs_path(device)
+        assert_equal "keep.txt moved to Trash.", flash[:notice]
+        file.reload
+        assert_not_nil file.deleted_at
+        assert_operator file.deleted_at, :>=, old_deleted_at || Time.current - 1.minute
+        assert_equal original_hash, file.sha256
+        assert_equal original_path, BackupStorage.new.path_for(file)
+        assert_equal "keep these bytes", File.binread(original_path)
+        assert_equal "FILE_TRASHED", SecurityEvent.order(:id).last.event_type
+      ensure
+        before_root ? ENV["PHONEVAULT_BACKUP_ROOT"] = before_root : ENV.delete("PHONEVAULT_BACKUP_ROOT")
+      end
+    end
+  end
+
+  test "delete cannot target another user's backup" do
+    sign_in_as users(:alice)
+    device = devices(:bob_phone)
+    run = device.backup_runs.create!(status: :completed)
+    file = run.backup_files.create!(original_filename: "secret.txt", size_bytes: 1,
+      sha256: "a" * 64, storage_path: "#{run.id}/#{SecureRandom.uuid}")
+
+    assert_no_difference "SecurityEvent.count" do
+      delete device_backup_run_backup_file_path(device, run, file)
+    end
+    assert_response :not_found
+    assert_nil file.reload.deleted_at
+  end
+
+  test "trashed backup files cannot be restored or previewed" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    run = device.backup_runs.create!(status: :completed)
+    file = run.backup_files.create!(original_filename: "gone.png", size_bytes: PNG_BYTES.bytesize,
+      sha256: Digest::SHA256.hexdigest(PNG_BYTES), storage_path: "#{run.id}/#{SecureRandom.uuid}",
+      deleted_at: Time.current)
+
+    get restore_device_backup_run_backup_file_path(device, run, file)
+    assert_response :not_found
+    get preview_device_backup_run_backup_file_path(device, run, file)
+    assert_response :not_found
+  end
+
   test "preview requires login" do
     get preview_device_backup_run_backup_file_path(devices(:alice_phone), 1, 1)
 

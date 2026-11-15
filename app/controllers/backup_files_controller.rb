@@ -28,6 +28,15 @@ def restore
     disposition: "attachment"
 end
 
+  def destroy
+    @backup_file.update!(deleted_at: Time.current)
+    record_security_event("FILE_TRASHED", current_user)
+
+    redirect_to device_backup_runs_path(@device),
+      notice: "#{@backup_file.original_filename} moved to Trash.",
+      status: :see_other
+  end
+
   # shows an image thumbnail in the backup history; only real images are served
   def preview
     content_type = BackupPreview.new.image_type(@backup_file)
@@ -57,7 +66,7 @@ end
 
   def set_backup_file
     # only find files belonging to this backup run
-    @backup_file = @backup_run.backup_files.find(params[:id])
+    @backup_file = @backup_run.backup_files.active.find(params[:id])
   end
 
   def missing_file

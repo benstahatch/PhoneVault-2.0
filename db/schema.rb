@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_054000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_15_010000) do
   create_table "backup_files", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
     t.bigint "backup_run_id", null: false
     t.datetime "created_at", null: false
@@ -19,6 +19,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_054000) do
     t.bigint "size_bytes", null: false
     t.string "storage_path", null: false
     t.datetime "updated_at", null: false
+    t.datetime "deleted_at"
+    t.index ["backup_run_id", "deleted_at"], name: "index_backup_files_on_backup_run_id_and_deleted_at"
     t.index ["backup_run_id"], name: "index_backup_files_on_backup_run_id"
     t.index ["sha256"], name: "index_backup_files_on_sha256"
   end

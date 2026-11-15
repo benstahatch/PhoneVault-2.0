@@ -1,6 +1,7 @@
 class BackupRun < ApplicationRecord
   belongs_to :device
   has_many :backup_files, dependent: :restrict_with_error
+  has_many :active_backup_files, -> { active }, class_name: "BackupFile"
 
   enum :status, {
     pending: "pending",

@@ -1,4 +1,6 @@
 class BackupFile < ApplicationRecord
+  scope :active, -> { where(deleted_at: nil) }
+
   belongs_to :backup_run
 
   validates :original_filename, presence: true
