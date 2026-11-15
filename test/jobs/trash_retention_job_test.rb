@@ -166,6 +166,14 @@ class TrashRetentionJobTest < ActiveJob::TestCase
   end
 
   test "overlapping cleanup is skipped when the database lock is held elsewhere" do
+    job = TrashRetentionJob.new
+    active_connection = ActiveRecord::Base.connection
+    database_name = active_connection.select_value("SELECT DATABASE()")
+    lock_name = job.send(:cleanup_lock_name_for_database, database_name)
+    other_worker_database = job.send(:cleanup_lock_name_for_database, "#{database_name}_worker_2")
+    assert_not_equal lock_name, other_worker_database
+    assert_operator lock_name.length, :<=, 64
+
     config = ActiveRecord::Base.connection_db_config.configuration_hash
     lock_client = Mysql2::Client.new(
       host: config.fetch(:host),
@@ -174,16 +182,16 @@ class TrashRetentionJobTest < ActiveJob::TestCase
       password: config.fetch(:password),
       database: config.fetch(:database)
     )
-    lock_name = ActiveRecord::Base.connection.quote(TrashRetentionJob::LOCK_NAME)
-    acquired = lock_client.query("SELECT GET_LOCK(#{lock_name}, 0)").first.values.first
+    quoted_lock_name = active_connection.quote(lock_name)
+    acquired = lock_client.query("SELECT GET_LOCK(#{quoted_lock_name}, 0)").first.values.first
     assert_equal 1, acquired.to_i
 
-    result = TrashRetentionJob.new.send(:with_cleanup_lock) { flunk "cleanup lock should prevent overlapping work" }
+    result = job.send(:with_cleanup_lock) { flunk "cleanup lock should prevent overlapping work" }
 
     assert_equal [], result
   ensure
     if lock_client
-      lock_client.query("SELECT RELEASE_LOCK(#{lock_name})") if lock_name
+      lock_client.query("SELECT RELEASE_LOCK(#{quoted_lock_name})") if quoted_lock_name
       lock_client.close
     end
   end

@@ -1,7 +1,9 @@
+require "digest"
+
 class TrashRetentionJob < ApplicationJob
   queue_as :background
 
-  LOCK_NAME = "phonevault_trash_retention_cleanup".freeze
+  LOCK_NAME_PREFIX = "phonevault_trash_retention_cleanup".freeze
 
   # Pass dry_run: true to report expired files without changing storage or rows.
   def perform(dry_run: false)
@@ -103,7 +105,8 @@ class TrashRetentionJob < ApplicationJob
 
   def with_cleanup_lock
     BackupFile.connection_pool.with_connection do |connection|
-      acquired = connection.select_value("SELECT GET_LOCK(#{connection.quote(LOCK_NAME)}, 0)").to_i == 1
+      lock_name = cleanup_lock_name(connection)
+      acquired = connection.select_value("SELECT GET_LOCK(#{connection.quote(lock_name)}, 0)").to_i == 1
       unless acquired
         Rails.logger.info("Trash retention cleanup skipped because another cleanup is running.")
         next []
@@ -112,8 +115,17 @@ class TrashRetentionJob < ApplicationJob
       begin
         yield
       ensure
-        connection.select_value("SELECT RELEASE_LOCK(#{connection.quote(LOCK_NAME)})")
+        connection.select_value("SELECT RELEASE_LOCK(#{connection.quote(lock_name)})")
       end
     end
+  end
+
+  def cleanup_lock_name(connection)
+    database_name = connection.select_value("SELECT DATABASE()")
+    cleanup_lock_name_for_database(database_name)
+  end
+
+  def cleanup_lock_name_for_database(database_name)
+    "#{LOCK_NAME_PREFIX}_#{Digest::SHA256.hexdigest(database_name)[0, 24]}"
   end
 end
