@@ -25,16 +25,12 @@ class TrashRetentionJob < ApplicationJob
 
   private
 
+  # trashed files older than their owner's retention period: one condition per period, joined with OR
   def expired_files
-    clauses = User::TRASH_RETENTION_DAYS.map do
-      "(users.trash_retention_days = ? AND backup_files.deleted_at <= ?)"
-    end
-    binds = User::TRASH_RETENTION_DAYS.flat_map { |days| [ days, days.days.ago ] }
-
-    BackupFile.trashed
-      .joins(backup_run: { device: :user })
-      .includes(backup_run: { device: :user })
-      .where(clauses.join(" OR "), *binds)
+    User::TRASH_RETENTION_DAYS.map do |days|
+      BackupFile.trashed.joins(backup_run: { device: :user })
+        .where(users: { trash_retention_days: days }, deleted_at: ..days.days.ago)
+    end.reduce(:or).includes(backup_run: { device: :user })
   end
 
   def preview(file, retention_days)
