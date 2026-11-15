@@ -1,0 +1,49 @@
+<% if flash[:notice] %>
+  <p role="status" class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800"><%= flash[:notice] %></p>
+<% end %>
+<% if flash[:alert] %>
+  <p role="alert" class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800"><%= flash[:alert] %></p>
+<% end %>
+
+<h1 class="mb-6 text-3xl font-bold text-neutral-900">Trash</h1>
+
+<div class="mb-6 flex flex-wrap gap-3">
+  <%= link_to "Back to devices", devices_path, class: button_classes(:secondary) %>
+</div>
+
+<% if @backup_files.any? %>
+  <div class="backup-history-scroll" role="region" aria-label="Trashed backups" tabindex="0">
+    <table class="backup-history">
+      <caption>Deleted backups, newest first.</caption>
+      <thead>
+        <tr>
+          <th scope="col">File</th>
+          <th scope="col">Device</th>
+          <th scope="col">Size</th>
+          <th scope="col">Deleted</th>
+          <th scope="col">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @backup_files.each do |file| %>
+          <tr>
+            <td><strong><%= file.original_filename %></strong></td>
+            <td><%= file.backup_run.device.name %></td>
+            <td><%= number_to_human_size(file.size_bytes) %></td>
+            <td><%= tag.time(file.deleted_at.strftime("%b %d, %Y %H:%M %Z"), datetime: file.deleted_at.iso8601) %></td>
+            <td>
+              <%= button_to "Restore",
+                restore_trash_path(file),
+                method: :patch,
+                form: { data: { turbo_confirm: "Restore #{file.original_filename} to backup history?" } },
+                class: button_classes(:secondary, size: :small),
+                aria: { label: "Restore #{file.original_filename}" } %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <p class="rounded-xl border border-neutral-200 bg-white p-5 text-neutral-600">Trash is empty.</p>
+<% end %>
