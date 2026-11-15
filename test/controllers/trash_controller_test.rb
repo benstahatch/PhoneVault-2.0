@@ -59,8 +59,26 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Server-level automatic cleanup is disabled", response.body
     assert_match "Your retention preference is 30 days", response.body
+    assert_select "tbody tr td:nth-child(5) strong", text: "Eligible on"
+    assert_select "tbody tr td:nth-child(5)", text: /Eligible in 25 days/
+    assert_no_match "Expires in 25 days", response.body
+    assert_select "tbody tr td:nth-child(5) time[datetime=?]", (deleted_at + 30.days).iso8601
+  end
+
+  test "trash uses expiration wording when server cleanup is enabled" do
+    ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
+    sign_in_as users(:alice)
+    users(:alice).update!(trash_retention_days: 30)
+    deleted_at = Time.zone.now.beginning_of_day - 5.days + 10.hours
+    @file.update!(deleted_at: deleted_at)
+
+    get trash_path
+
+    assert_response :success
+    assert_select "thead th", text: "Expiration"
     assert_select "tbody tr td:nth-child(5) strong", text: "Expires in 25 days"
     assert_select "tbody tr td:nth-child(5) time[datetime=?]", (deleted_at + 30.days).iso8601
+    assert_no_match "Eligible on", response.body
   end
 
   test "trash page explains when it is empty" do

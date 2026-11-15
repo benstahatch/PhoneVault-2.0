@@ -32,7 +32,7 @@
           <th scope="col">Device</th>
           <th scope="col">Size</th>
           <th scope="col">Deleted</th>
-          <th scope="col">Expiration</th>
+          <th scope="col"><%= @automatic_cleanup_enabled ? "Expiration" : "Eligibility" %></th>
           <th scope="col">Actions</th>
         </tr>
       </thead>
@@ -49,11 +49,18 @@
               <% else %>
                 <% expiration_at = TrashRetention.expiration_at(file.deleted_at, @retention_days) %>
                 <% days_remaining = [ (expiration_at.to_date - Time.zone.today).to_i, 0 ].max %>
-                <strong>Expires in <%= pluralize(days_remaining, "day") %></strong>
-                <br>
-                <%= tag.time(expiration_at.strftime("%b %d, %Y %H:%M %Z"), datetime: expiration_at.iso8601) %>
-                <% if expiration_at <= Time.current %>
-                  <span class="block text-sm text-neutral-600"><%= @automatic_cleanup_enabled ? "Past expiry; awaiting scheduled cleanup." : "Past expiry; automatic cleanup is disabled." %></span>
+                <% if @automatic_cleanup_enabled %>
+                  <strong>Expires in <%= pluralize(days_remaining, "day") %></strong>
+                  <br>
+                  <%= tag.time(expiration_at.strftime("%b %d, %Y %H:%M %Z"), datetime: expiration_at.iso8601) %>
+                  <% if expiration_at <= Time.current %>
+                    <span class="block text-sm text-neutral-600">Past expiry; awaiting scheduled cleanup.</span>
+                  <% end %>
+                <% else %>
+                  <strong>Eligible on</strong>
+                  <br>
+                  <%= tag.time(expiration_at.strftime("%b %d, %Y %H:%M %Z"), datetime: expiration_at.iso8601) %>
+                  <span class="block text-sm text-neutral-600"><%= days_remaining.positive? ? "Eligible in #{pluralize(days_remaining, 'day')} if server cleanup is enabled." : "Past eligibility date; automatic cleanup is disabled." %></span>
                 <% end %>
               <% end %>
             </td>

@@ -11,6 +11,12 @@ class TrashRetentionSettingsController < ApplicationController
       return redirect_to trash_path, notice: "Trash retention is set to Never. Files stay until you restore or delete them."
     end
 
+    unless TrashRetention.cleanup_enabled?
+      current_user.update!(trash_retention_days: @retention_days)
+      session.delete(:trash_retention_confirmation)
+      return redirect_to trash_path, notice: "Trash retention is set to #{@retention_days} days."
+    end
+
     load_settings
     @eligible_files = TrashRetention.expired_files_for(current_user, @retention_days)
       .includes(backup_run: :device)
@@ -42,13 +48,7 @@ class TrashRetentionSettingsController < ApplicationController
     end
 
     current_user.update!(trash_retention_days: retention_days)
-    if TrashRetention.cleanup_enabled?
-      redirect_to trash_path,
-        notice: "Trash retention is set to #{retention_days} days. Expired files will be removed by scheduled cleanup."
-    else
-      redirect_to trash_path,
-        alert: "Your #{retention_days}-day preference is saved, but server-level automatic cleanup is disabled. No files will be automatically deleted."
-    end
+    redirect_to trash_path, notice: "Trash retention is set to #{retention_days} days."
   rescue ArgumentError, ActiveRecord::RecordInvalid
     redirect_to trash_retention_settings_path, alert: "Choose Never, 30, 60, or 90 days."
   end
