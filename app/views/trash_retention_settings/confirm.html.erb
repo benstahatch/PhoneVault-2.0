@@ -32,8 +32,8 @@
             <tr>
               <td><strong><%= file.original_filename %></strong></td>
               <td><%= file.backup_run.device.name %></td>
-              <td><%= tag.time(file.deleted_at.strftime("%b %d, %Y %H:%M %Z"), datetime: file.deleted_at.iso8601) %></td>
-              <td><%= tag.time(expiration_at.strftime("%b %d, %Y %H:%M %Z"), datetime: expiration_at.iso8601) %></td>
+              <td><%= timestamp(file.deleted_at) %></td>
+              <td><%= timestamp(expiration_at) %></td>
             </tr>
           <% end %>
         </tbody>

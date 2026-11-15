@@ -1,10 +1,3 @@
-<% if flash[:notice] %>
-  <p role="status" class="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800"><%= flash[:notice] %></p>
-<% end %>
-<% if flash[:alert] %>
-  <p role="alert" class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800"><%= flash[:alert] %></p>
-<% end %>
-
 <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
   <h1 class="m-0 text-3xl font-bold text-neutral-900">Trash</h1>
   <%= link_to "Retention Settings", trash_retention_settings_path, class: button_classes(:secondary) %>
@@ -42,7 +35,7 @@
             <td><strong><%= file.original_filename %></strong></td>
             <td><%= file.backup_run.device.name %></td>
             <td><%= number_to_human_size(file.size_bytes) %></td>
-            <td><%= tag.time(file.deleted_at.strftime("%b %d, %Y %H:%M %Z"), datetime: file.deleted_at.iso8601) %></td>
+            <td><%= timestamp(file.deleted_at) %></td>
             <td>
               <% if @retention_days.nil? %>
                 <strong>Never</strong>
@@ -52,14 +45,14 @@
                 <% if @automatic_cleanup_enabled %>
                   <strong>Expires in <%= pluralize(days_remaining, "day") %></strong>
                   <br>
-                  <%= tag.time(expiration_at.strftime("%b %d, %Y %H:%M %Z"), datetime: expiration_at.iso8601) %>
+                  <%= timestamp(expiration_at) %>
                   <% if expiration_at <= Time.current %>
                     <span class="block text-sm text-neutral-600">Past expiry; awaiting scheduled cleanup.</span>
                   <% end %>
                 <% else %>
                   <strong>Eligible on</strong>
                   <br>
-                  <%= tag.time(expiration_at.strftime("%b %d, %Y %H:%M %Z"), datetime: expiration_at.iso8601) %>
+                  <%= timestamp(expiration_at) %>
                   <span class="block text-sm text-neutral-600"><%= days_remaining.positive? ? "Eligible in #{pluralize(days_remaining, 'day')} if server cleanup is enabled." : "Past eligibility date; automatic cleanup is disabled." %></span>
                 <% end %>
               <% end %>

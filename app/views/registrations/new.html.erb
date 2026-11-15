@@ -2,17 +2,7 @@
 
 <h1>Create a PhoneVault Account</h1>
 
-<% if @user.errors.any? %>
-  <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-    <h2 class="m-0 mb-2 text-sm font-semibold"><%= pluralize(@user.errors.count, "error") %> prevented this account from being created:</h2>
-
-    <ul class="m-0 pl-5">
-      <% @user.errors.full_messages.each do |message| %>
-        <li><%= message %></li>
-      <% end %>
-    </ul>
-  </div>
-<% end %>
+<%= render "shared/errors", record: @user, prevented: "this account from being created" %>
 
 <%= form_with model: @user, url: signup_path do |form| %>
   <div class="mb-5">

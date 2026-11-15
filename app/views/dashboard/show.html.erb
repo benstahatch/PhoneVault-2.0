@@ -35,7 +35,7 @@
   <h2 class="mt-0 text-xl font-semibold">Latest successful backup</h2>
   <% if @latest_backup %>
     <p><%= link_to @latest_backup.device.name, device_backup_runs_path(@latest_backup.device), class: "min-w-0 font-medium text-neutral-900 underline underline-offset-4 transition-colors duration-150 hover:text-[#e66b00] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neutral-900 motion-reduce:transition-none" %> —
-      <%= tag.time(@latest_backup.completed_at.strftime("%b %d, %Y %H:%M %Z"), datetime: @latest_backup.completed_at.iso8601) %></p>
+      <%= timestamp(@latest_backup.completed_at) %></p>
   <% else %>
     <p>No successful backups yet.</p>
   <% end %>
@@ -57,7 +57,7 @@
           <span class="backup-status inline-flex items-center gap-2 rounded-md border px-3 py-1 text-sm font-semibold <%= badge_class %>">
             <span aria-hidden="true" data-symbol="<%= symbol %>" class="mr-1.5 before:content-[attr(data-symbol)]"></span><span><%= run.status.humanize %></span>
           </span> —
-          <%= tag.time(run.created_at.strftime("%b %d, %Y %H:%M %Z"), datetime: run.created_at.iso8601) %></li>
+          <%= timestamp(run.created_at) %></li>
       <% end %>
     </ul>
   <% else %>
