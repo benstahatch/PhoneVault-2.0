@@ -2,7 +2,7 @@
 
 <div class="mb-6 flex flex-wrap gap-3">
   <%= link_to "Upload a file", new_device_backup_run_path(@device), class: button_classes %>
-  <%= link_to "Trash", trash_path, class: button_classes(:secondary) %>
+  <%= link_to "Trash", trashed_files_path, class: button_classes(:secondary) %>
   <%= link_to "Back to your devices", devices_path, class: button_classes(:secondary) %>
 </div>
 

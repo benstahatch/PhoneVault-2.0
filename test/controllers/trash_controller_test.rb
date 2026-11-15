@@ -20,7 +20,7 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "trash requires login" do
-    get trash_path
+    get trashed_files_path
     assert_redirected_to login_path
   end
 
@@ -28,12 +28,12 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     create_other_user_trashed_file
     sign_in_as users(:alice)
 
-    get trash_path
+    get trashed_files_path
 
     assert_response :success
     assert_select "h1", text: "Trash"
     assert_select "h2", text: "Recently Deleted"
-    assert_select "a[href=?]", trash_retention_settings_path, text: "Retention Settings"
+    assert_select "a[href=?]", edit_trash_retention_settings_path, text: "Retention Settings"
     assert_select "tbody tr", count: 1
     assert_select "tbody tr td:nth-child(1)", text: "family-photo.jpg"
     assert_select "tbody tr td:nth-child(2)", text: @device.name
@@ -41,9 +41,9 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     assert_select "tbody tr td:nth-child(5)", text: "Never"
     assert_select "time[datetime=?]", @file.deleted_at.iso8601
     assert_select "form[action=?][data-turbo-confirm=?]",
-      restore_trash_path(@file), "Restore family-photo.jpg to backup history?"
+      restore_trashed_file_path(@file), "Restore family-photo.jpg to backup history?"
     assert_select "form[action=?][data-turbo-confirm=?]",
-      permanently_delete_trash_path(@file),
+      trashed_file_path(@file),
       "Permanently delete family-photo.jpg from PhoneVault storage? This cannot be undone."
     assert_no_match "bob-secret.txt", response.body
   end
@@ -54,7 +54,7 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     deleted_at = Time.zone.now.beginning_of_day - 5.days + 10.hours
     @file.update!(deleted_at: deleted_at)
 
-    get trash_path
+    get trashed_files_path
 
     assert_response :success
     assert_match "Server-level automatic cleanup is disabled", response.body
@@ -72,7 +72,7 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     deleted_at = Time.zone.now.beginning_of_day - 5.days + 10.hours
     @file.update!(deleted_at: deleted_at)
 
-    get trash_path
+    get trashed_files_path
 
     assert_response :success
     assert_select "thead th", text: "Expiration"
@@ -85,7 +85,7 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:alice)
     @file.update!(deleted_at: nil)
 
-    get trash_path
+    get trashed_files_path
 
     assert_response :success
     assert_match "Trash is empty.", response.body
@@ -101,10 +101,10 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     original_deleted_at = @file.deleted_at
 
     assert_no_difference "BackupFile.count" do
-      patch restore_trash_path(@file)
+      patch restore_trashed_file_path(@file)
     end
 
-    assert_redirected_to trash_path
+    assert_redirected_to trashed_files_path
     assert_equal "family-photo.jpg restored to backup history.", flash[:notice]
     @file.reload
     assert_nil @file.deleted_at
@@ -123,11 +123,11 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:alice)
 
     assert_no_difference "SecurityEvent.count" do
-      patch restore_trash_path(file)
+      patch restore_trashed_file_path(file)
     end
     assert_response :not_found
     assert_not_nil file.reload.deleted_at
-    get trash_path
+    get trashed_files_path
     assert_response :success
     assert_no_match "bob-secret.txt", response.body
   end
@@ -135,7 +135,7 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
   test "restore requires login" do
     file = create_other_user_trashed_file
 
-    patch restore_trash_path(file)
+    patch restore_trashed_file_path(file)
 
     assert_redirected_to login_path
     assert_not_nil file.reload.deleted_at
@@ -149,18 +149,18 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
 
     assert_difference("BackupFile.count", -1) do
       assert_difference("SecurityEvent.count", 1) do
-        delete permanently_delete_trash_path(@file)
+        delete trashed_file_path(@file)
       end
     end
 
-    assert_redirected_to trash_path
+    assert_redirected_to trashed_files_path
     assert_equal "family-photo.jpg was permanently deleted.", flash[:notice]
     assert_not File.exist?(stored_path)
     assert_equal "other bytes", File.binread(BackupStorage.for_run(@run).path_for(second_file))
     assert_equal "FILE_PERMANENTLY_DELETED", SecurityEvent.order(:id).last.event_type
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
-      delete permanently_delete_trash_path(@file)
+      delete trashed_file_path(@file)
     end
     assert_response :not_found
   end
@@ -171,7 +171,7 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     sign_in_as users(:alice)
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
-      delete permanently_delete_trash_path(file)
+      delete trashed_file_path(file)
     end
 
     assert_response :not_found
@@ -186,10 +186,10 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     @file.update_column(:storage_path, "../../#{File.basename(sentinel)}")
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
-      delete permanently_delete_trash_path(@file)
+      delete trashed_file_path(@file)
     end
 
-    assert_redirected_to trash_path
+    assert_redirected_to trashed_files_path
     assert_match "record was kept", flash[:alert]
     assert @file.reload.deleted_at.present?
     assert_equal "leave this alone", File.binread(sentinel)
@@ -202,10 +202,10 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     File.delete(BackupStorage.for_run(@run).path_for(@file))
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
-      delete permanently_delete_trash_path(@file)
+      delete trashed_file_path(@file)
     end
 
-    assert_redirected_to trash_path
+    assert_redirected_to trashed_files_path
     assert_match "missing from storage", flash[:alert]
     assert @file.reload.deleted_at.present?
   end
@@ -218,10 +218,10 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     File.chmod(directory_mode & ~0o222, directory)
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
-      delete permanently_delete_trash_path(@file)
+      delete trashed_file_path(@file)
     end
 
-    assert_redirected_to trash_path
+    assert_redirected_to trashed_files_path
     assert_match "could not be deleted", flash[:alert]
     assert_match "record was kept", flash[:alert]
     assert @file.reload.deleted_at.present?

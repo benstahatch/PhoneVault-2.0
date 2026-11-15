@@ -8,13 +8,13 @@ class TrashRetentionSettingsController < ApplicationController
     if @retention_days.nil?
       current_user.update!(trash_retention_days: nil)
       session.delete(:trash_retention_confirmation)
-      return redirect_to trash_path, notice: "Trash retention is set to Never. Files stay until you restore or delete them."
+      return redirect_to trashed_files_path, notice: "Trash retention is set to Never. Files stay until you restore or delete them."
     end
 
     unless TrashRetention.cleanup_enabled?
       current_user.update!(trash_retention_days: @retention_days)
       session.delete(:trash_retention_confirmation)
-      return redirect_to trash_path, notice: "Trash retention is set to #{@retention_days} days."
+      return redirect_to trashed_files_path, notice: "Trash retention is set to #{@retention_days} days."
     end
 
     load_settings
@@ -30,7 +30,7 @@ class TrashRetentionSettingsController < ApplicationController
       expires_at: 15.minutes.from_now.to_i
     }
   rescue ArgumentError
-    redirect_to trash_retention_settings_path, alert: "Choose Never, 30, 60, or 90 days."
+    redirect_to edit_trash_retention_settings_path, alert: "Choose Never, 30, 60, or 90 days."
   end
 
   def update
@@ -38,19 +38,19 @@ class TrashRetentionSettingsController < ApplicationController
     if retention_days.nil?
       current_user.update!(trash_retention_days: nil)
       session.delete(:trash_retention_confirmation)
-      return redirect_to trash_path, notice: "Trash retention is set to Never. Files stay until you restore or delete them."
+      return redirect_to trashed_files_path, notice: "Trash retention is set to Never. Files stay until you restore or delete them."
     end
 
     confirmation = session.delete(:trash_retention_confirmation)
     unless valid_confirmation?(confirmation, retention_days)
-      return redirect_to trash_retention_settings_path,
+      return redirect_to edit_trash_retention_settings_path,
         alert: "Review the retention warning and confirm the change before saving."
     end
 
     current_user.update!(trash_retention_days: retention_days)
-    redirect_to trash_path, notice: "Trash retention is set to #{retention_days} days."
+    redirect_to trashed_files_path, notice: "Trash retention is set to #{retention_days} days."
   rescue ArgumentError, ActiveRecord::RecordInvalid
-    redirect_to trash_retention_settings_path, alert: "Choose Never, 30, 60, or 90 days."
+    redirect_to edit_trash_retention_settings_path, alert: "Choose Never, 30, 60, or 90 days."
   end
 
   private

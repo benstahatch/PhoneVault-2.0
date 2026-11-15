@@ -1,6 +1,6 @@
 <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
   <h1 class="m-0 text-3xl font-bold text-neutral-900">Trash</h1>
-  <%= link_to "Retention Settings", trash_retention_settings_path, class: button_classes(:secondary) %>
+  <%= link_to "Retention Settings", edit_trash_retention_settings_path, class: button_classes(:secondary) %>
 </div>
 
 <% unless @automatic_cleanup_enabled %>
@@ -60,13 +60,13 @@
             <td>
               <div class="flex flex-wrap gap-2">
                 <%= button_to "Restore",
-                  restore_trash_path(file),
+                  restore_trashed_file_path(file),
                   method: :patch,
                   form: { data: { turbo_confirm: "Restore #{file.original_filename} to backup history?" } },
                   class: button_classes(:secondary, size: :small),
                   aria: { label: "Restore #{file.original_filename}" } %>
                 <%= button_to "Delete Permanently",
-                  permanently_delete_trash_path(file),
+                  trashed_file_path(file),
                   method: :delete,
                   form: { data: { turbo_confirm: "Permanently delete #{file.original_filename} from PhoneVault storage? This cannot be undone." } },
                   class: button_classes(:danger, size: :small),

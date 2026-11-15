@@ -22,14 +22,14 @@ class TrashRetentionSettingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "settings require login" do
-    get trash_retention_settings_path
+    get edit_trash_retention_settings_path
     assert_redirected_to login_path
   end
 
   test "settings offer Never and the supported periods, with Never selected initially" do
     sign_in_as @user
 
-    get trash_retention_settings_path
+    get edit_trash_retention_settings_path
 
     assert_response :success
     assert_select "h1", text: "Retention Settings"
@@ -63,9 +63,9 @@ class TrashRetentionSettingsControllerTest < ActionDispatch::IntegrationTest
   test "saving a retention period requires the confirmation flow and checkbox" do
     sign_in_as @user
 
-    patch update_trash_retention_settings_path, params: { trash_retention_days: "30" }
+    patch trash_retention_settings_path, params: { trash_retention_days: "30" }
 
-    assert_redirected_to trash_retention_settings_path
+    assert_redirected_to edit_trash_retention_settings_path
     assert_equal "Review the retention warning and confirm the change before saving.", flash[:alert]
     assert_nil @user.reload.trash_retention_days
   end
@@ -76,7 +76,7 @@ class TrashRetentionSettingsControllerTest < ActionDispatch::IntegrationTest
     [ 30, 60, 90 ].each do |days|
       post confirm_trash_retention_settings_path, params: { trash_retention_days: days.to_s }
 
-      assert_redirected_to trash_path
+      assert_redirected_to trashed_files_path
       assert_equal "Trash retention is set to #{days} days.", flash[:notice]
       assert_equal days, @user.reload.trash_retention_days
       follow_redirect!
@@ -88,7 +88,7 @@ class TrashRetentionSettingsControllerTest < ActionDispatch::IntegrationTest
     end
 
     post confirm_trash_retention_settings_path, params: { trash_retention_days: "" }
-    assert_redirected_to trash_path
+    assert_redirected_to trashed_files_path
     assert_nil @user.reload.trash_retention_days
     assert_equal "Trash retention is set to Never. Files stay until you restore or delete them.", flash[:notice]
     assert File.file?(BackupStorage.for_run(@run).path_for(@file))
@@ -100,7 +100,7 @@ class TrashRetentionSettingsControllerTest < ActionDispatch::IntegrationTest
     delete logout_path
     sign_in_as @user
 
-    get trash_retention_settings_path
+    get edit_trash_retention_settings_path
 
     assert_response :success
     assert_select "select[name='trash_retention_days'] option[selected][value='90']"
@@ -116,13 +116,13 @@ class TrashRetentionSettingsControllerTest < ActionDispatch::IntegrationTest
       assert_select "h1", text: "Confirm Retention Settings"
       token = css_select("input[name='confirmation_token']").first["value"]
 
-      patch update_trash_retention_settings_path, params: {
+      patch trash_retention_settings_path, params: {
         trash_retention_days: days.to_s,
         confirmation_token: token,
         confirm_retention: "1"
       }
 
-      assert_redirected_to trash_path
+      assert_redirected_to trashed_files_path
       assert_equal "Trash retention is set to #{days} days.", flash[:notice]
       assert_equal days, @user.reload.trash_retention_days
       follow_redirect!
@@ -138,7 +138,7 @@ class TrashRetentionSettingsControllerTest < ActionDispatch::IntegrationTest
 
       post confirm_trash_retention_settings_path, params: { trash_retention_days: "" }
 
-      assert_redirected_to trash_path
+      assert_redirected_to trashed_files_path
       assert_nil @user.reload.trash_retention_days
       assert_equal "Trash retention is set to Never. Files stay until you restore or delete them.", flash[:notice]
     end
@@ -150,7 +150,7 @@ class TrashRetentionSettingsControllerTest < ActionDispatch::IntegrationTest
 
     post confirm_trash_retention_settings_path, params: { trash_retention_days: "7" }
 
-    assert_redirected_to trash_retention_settings_path
+    assert_redirected_to edit_trash_retention_settings_path
     assert_equal "Choose Never, 30, 60, or 90 days.", flash[:alert]
     assert_nil @user.reload.trash_retention_days
   end

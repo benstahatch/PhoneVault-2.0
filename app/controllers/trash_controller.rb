@@ -13,7 +13,7 @@ class TrashController < ApplicationController
     file.update!(deleted_at: nil)
     record_security_event("FILE_RECOVERED_FROM_TRASH", current_user)
 
-    redirect_to trash_path,
+    redirect_to trashed_files_path,
       notice: "#{file.original_filename} restored to backup history.",
       status: :see_other
   end
@@ -29,14 +29,14 @@ class TrashController < ApplicationController
       record_security_event("FILE_PERMANENTLY_DELETED", current_user)
     end
 
-    redirect_to trash_path,
+    redirect_to trashed_files_path,
       notice: "#{filename} was permanently deleted.",
       status: :see_other
   rescue BackupStorage::MissingFile
-    redirect_to trash_path, alert: "Backup file is missing from storage. The Trash record was kept."
+    redirect_to trashed_files_path, alert: "Backup file is missing from storage. The Trash record was kept."
   rescue BackupStorage::CorruptedFile
-    redirect_to trash_path, alert: "Backup file failed integrity verification. The Trash record was kept."
+    redirect_to trashed_files_path, alert: "Backup file failed integrity verification. The Trash record was kept."
   rescue BackupStorage::Error, BackupDirectory::Error => error
-    redirect_to trash_path, alert: "Backup file could not be deleted. The Trash record was kept. #{error.message}"
+    redirect_to trashed_files_path, alert: "Backup file could not be deleted. The Trash record was kept. #{error.message}"
   end
 end

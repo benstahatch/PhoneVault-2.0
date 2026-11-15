@@ -1,45 +1,38 @@
 Rails.application.routes.draw do
-  get "login", to: "sessions#new", as: :login
-  get "dashboard", to: "dashboard#show", as: :dashboard
-  get "activity", to: "activity#index", as: :activity
-  get "signup", to: "registrations#new", as: :signup
-  post "signup", to: "registrations#create"
+  root "sessions#new"
+
+  # short custom URLs; each route is named after its path (login_path, signup_path, ...)
+  get "login", to: "sessions#new"
   post "login", to: "sessions#create"
-  delete "logout", to: "sessions#destroy", as: :logout
-  get "trash", to: "trash#index", as: :trash
-  get "trash/retention", to: "trash_retention_settings#edit", as: :trash_retention_settings
-  post "trash/retention/confirm", to: "trash_retention_settings#confirm", as: :confirm_trash_retention_settings
-  patch "trash/retention", to: "trash_retention_settings#update", as: :update_trash_retention_settings
-  patch "trash/:id/restore", to: "trash#restore", as: :restore_trash
-  delete "trash/:id", to: "trash#destroy", as: :permanently_delete_trash
+  delete "logout", to: "sessions#destroy"
+  get "signup", to: "registrations#new"
+  post "signup", to: "registrations#create"
+  get "dashboard", to: "dashboard#show"
+  get "activity", to: "activity#index"
 
-
-resources :devices, only: %i[index new create edit update] do
-  resource :backup_location, only: [] do
-    get :directories
-    post :validate_path
-  end
-  resources :backup_runs, only: %i[index new create] do
-  resources :backup_files, only: [ :destroy ] do
-    member do
-      get :restore
-      get :preview
+  resources :devices, only: %i[index new create edit update] do
+    resource :backup_location, only: [] do
+      get :directories
+      post :validate_path
+    end
+    resources :backup_runs, only: %i[index new create] do
+      resources :backup_files, only: :destroy do
+        member do
+          get :restore
+          get :preview
+        end
       end
     end
   end
-end
 
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  # /trash lists the user's trashed backup files; /trash/retention/edit sets how long they stay
+  resources :trash, as: :trashed_files, only: %i[index destroy] do
+    patch :restore, on: :member
+  end
+  resource :trash_retention_settings, path: "trash/retention", only: %i[edit update] do
+    post :confirm
+  end
 
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  # health check for load balancers and uptime monitors: 200 if the app boots, otherwise 500
   get "up" => "rails/health#show", as: :rails_health_check
-
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
-
-  # Defines the root path route ("/")
-  root "sessions#new"
-  # root "posts#index"
 end
