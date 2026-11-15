@@ -2,39 +2,21 @@
 
 <h1>Sign in to PhoneVault</h1>
 
-<%=form_with url: login_path, scope: :session do |form|%>
-
-
-
+<%= form_with url: login_path, scope: :session do |form| %>
   <div class="mb-5">
-    <%= form.label :username,
-          class: "mb-2 block text-sm font-medium text-slate-700" %>
-
-    <%= form.text_field :username,
-          required: true,
-          autofocus: true,
-          autocomplete: "username",
-          autocapitalize: "none",
-          autocorrect: "off",
-          spellcheck: false,
-          placeholder: "Enter your username",
-          class: "block box-border w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 focus:border-orange-600 focus:outline-2 focus:outline-orange-600" %>
+    <%= form.label :username, class: label_classes %>
+    <%= form.text_field :username, required: true, autofocus: true, autocomplete: "username",
+          autocapitalize: "none", autocorrect: "off", spellcheck: false,
+          placeholder: "Enter your username", class: field_classes %>
   </div>
 
   <div class="mb-5">
-    <%= form.label :password,
-          class: "mb-2 block text-sm font-medium text-slate-700" %>
-
-    <%= form.password_field :password,
-        required: true,
-        autocomplete: "current-password",
-        class: "block box-border w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 focus:border-orange-600 focus:outline-2 focus:outline-orange-600" %>
+    <%= form.label :password, class: label_classes %>
+    <%= form.password_field :password, required: true, autocomplete: "current-password", class: field_classes %>
   </div>
 
-
   <div class="mb-5">
-    <%= form.submit "Sign in",
-          class: "w-full rounded-lg bg-[#c45a00] px-4 py-3 font-semibold text-white cursor-pointer transition-colors hover:bg-[#a94c00] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" %>
+    <%= form.submit "Sign in", class: "#{button_classes(:brand)} w-full" %>
   </div>
 <% end %>
 

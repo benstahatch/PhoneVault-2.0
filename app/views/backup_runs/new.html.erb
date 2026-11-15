@@ -52,7 +52,7 @@
     </div>
 
     <div class="flex flex-wrap gap-3">
-      <%= form.submit "Upload", class: "#{button_classes} cursor-pointer" %>
+      <%= form.submit "Upload", class: button_classes %>
       <%= link_to "Back to backups", device_backup_runs_path(@device), class: button_classes(:secondary) %>
     </div>
   <% end %>

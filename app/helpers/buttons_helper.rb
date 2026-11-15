@@ -1,7 +1,7 @@
 # Tailwind classes that make a link look like a button, matching the dashboard's "Your devices" button.
 # Use them as: link_to "Upload", path, class: button_classes
 module ButtonsHelper
-  BUTTON_BASE = "inline-flex box-border items-center justify-center rounded-lg font-semibold no-underline " \
+  BUTTON_BASE = "inline-flex box-border cursor-pointer items-center justify-center rounded-lg font-semibold no-underline " \
                 "transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-4 " \
                 "focus-visible:outline-neutral-900 motion-reduce:transition-none".freeze
 
@@ -10,6 +10,8 @@ module ButtonsHelper
     primary: "border-0 bg-[#171717] text-white hover:bg-[#e66b00] hover:text-white",
     # white outlined button for secondary actions like "Back"
     secondary: "border border-neutral-300 bg-white text-neutral-900 hover:border-[#e66b00] hover:text-[#c45a00]",
+    # orange button for signing in and signing up
+    brand: "border-0 bg-[#c45a00] text-white hover:bg-[#a94c00] hover:text-white",
     # red button for an irreversible action
     danger: "border border-red-700 bg-red-700 text-white hover:border-red-800 hover:bg-red-800"
   }.freeze

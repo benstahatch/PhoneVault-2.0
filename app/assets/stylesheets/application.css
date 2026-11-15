@@ -1,23 +1,8 @@
-/*
- * This is a manifest file that'll be compiled into application.css.
- *
- * With Propshaft, assets are served efficiently without preprocessing steps. You can still include
- * application-wide styles in this file, but keep in mind that CSS precedence will follow the standard
- * cascading order, meaning styles declared later in the document or manifest will override earlier ones,
- * depending on specificity.
- *
- * Consider organizing styles into separate files for maintainability.
- */
-/* Basic PhoneVault page styling */
 /* Basic PhoneVault page styling */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-
 /*Design Tokens*/
 :root {
-  --pv-primary: #b94e00;
-  --pv-primary-hover: #913d00;
-  --pv-text: #1f2937;
   --pv-border: #d6dce4;
   --pv-radius: 10px;
 }
@@ -40,7 +25,6 @@ body {
   background-color: white;
   border-bottom: 1px solid #dce8e8;
 }
-
 
 .site-header-inner {
   max-width: 1100px;
@@ -68,7 +52,6 @@ body {
   flex-wrap: wrap;
 }
 
-
 .site-nav a {
   color: #1f2937;
   text-decoration: none;
@@ -76,73 +59,6 @@ body {
 
 .site-nav a:hover {
   color: #e66b00;
-}
-
-
-/* All PhoneVault buttons */
-.button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  min-height: 48px;
-  padding: 0 18px;
-  box-sizing: border-box;
-
-  border: 1px solid transparent;
-  border-radius: var(--pv-radius);
-
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-decoration: none;
-
-  cursor: pointer;
-  transition: background-color 0.15s, box-shadow 0.15s;
-}
-
-/* Important actions */
-.button-primary {
-  background-color: var(--pv-primary);
-  color: white;
-  border-color: var(--pv-primary);
-}
-
-.button-primary:hover {
-  background-color: var(--pv-primary-hover);
-  border-color: var(--pv-primary-hover);
-}
-
-/* Secondary actions */
-.button-secondary {
-  background-color: white;
-  color: var(--pv-text);
-  border-color: var(--pv-border);
-}
-
-.button-secondary:hover {
-  background-color: #f3f6f8;
-}
-
-/* Visible keyboard focus */
-.button:focus-visible {
-  outline: 3px solid #2563eb;
-  outline-offset: 3px;
-}
-
-/* Disabled buttons */
-.button:disabled,
-.button[aria-disabled="true"] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Respect reduced-motion preferences */
-@media (prefers-reduced-motion: reduce) {
-  .button {
-    transition: none;
-  }
 }
 
 /* Keep backup metadata readable on narrow screens. */

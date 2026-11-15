@@ -7,42 +7,27 @@
 <%= form_with model: @user, url: signup_path do |form| %>
   <div class="mb-5">
     <%= form.label :username, class: label_classes %>
-    <%= form.text_field :username,
-          required: true,
-          autofocus: true,
-          autocomplete: "username",
-          autocapitalize: "none",
-          autocorrect: "off",
-          spellcheck: false,
-          class: field_classes %>
+    <%= form.text_field :username, required: true, autofocus: true, autocomplete: "username",
+          autocapitalize: "none", autocorrect: "off", spellcheck: false, class: field_classes %>
   </div>
 
   <div class="mb-5">
     <%= form.label :display_name, class: label_classes %>
-    <%= form.text_field :display_name,
-          required: true,
-          class: field_classes %>
+    <%= form.text_field :display_name, required: true, class: field_classes %>
   </div>
 
   <div class="mb-5">
     <%= form.label :password, class: label_classes %>
-    <%= form.password_field :password,
-          required: true,
-          autocomplete: "new-password",
-          class: field_classes %>
+    <%= form.password_field :password, required: true, autocomplete: "new-password", class: field_classes %>
   </div>
 
   <div class="mb-5">
     <%= form.label :password_confirmation, class: label_classes %>
-    <%= form.password_field :password_confirmation,
-          required: true,
-          autocomplete: "new-password",
-          class: field_classes %>
+    <%= form.password_field :password_confirmation, required: true, autocomplete: "new-password", class: field_classes %>
   </div>
 
   <div class="mb-5">
-    <%= form.submit "Create account",
-          class: "w-full rounded-lg bg-[#c45a00] px-4 py-3 font-semibold text-white cursor-pointer transition-colors hover:bg-[#a94c00] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" %>
+    <%= form.submit "Create account", class: "#{button_classes(:brand)} w-full" %>
   </div>
 <% end %>
 
