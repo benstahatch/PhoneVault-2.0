@@ -3,12 +3,16 @@ class BackupFilesController < ApplicationController
   before_action :set_backup_run
   before_action :set_backup_file
 
+  rescue_from BackupDirectory::Error do |error|
+    redirect_to device_backup_runs_path(@device), alert: error.message
+  end
+
   rescue_from BackupStorage::MissingFile, with: :missing_file
   rescue_from BackupStorage::CorruptedFile, with: :corrupted_file
 
 def restore
   # verify the file and return its safe path on disk
-  path = BackupStorage.new.restore(@backup_file)
+  path = BackupStorage.for_run(@backup_run).restore(@backup_file)
 
   # only reached when the file exists and its sha-256 matches
   record_security_event("FILE_RESTORED", current_user, subject: @backup_file, details: file_details)
@@ -34,7 +38,7 @@ end
     response.headers["Cache-Control"] = "private, max-age=3600"
 
     # path_for keeps the path inside the backup folder, just like restore
-    path = BackupStorage.new.path_for(@backup_file)
+    path = BackupStorage.for_run(@backup_run).path_for(@backup_file)
 
     send_file path.to_s, type: content_type, disposition: "inline"
   end

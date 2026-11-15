@@ -23,12 +23,12 @@ class BackupStorageTest < ActiveSupport::TestCase
     assert_equal "hello world", File.binread(@storage.path_for(file))
   end
 
-  test "store keeps the path relative and ignores the uploaded filename" do
+  test "store keeps readable paths relative and sanitizes uploaded filenames" do
     file = @storage.store(StringIO.new("x"), backup_run: @run, original_filename: "../../etc/passwd")
 
     assert_not file.storage_path.start_with?("/")
     assert_not_includes file.storage_path, ".."
-    assert file.storage_path.start_with?("#{@run.id}/")
+    assert file.storage_path.start_with?("Alice-Pixel-Backups/")
   end
 
   test "store handles an empty file" do
@@ -62,7 +62,7 @@ class BackupStorageTest < ActiveSupport::TestCase
     end
 
     assert_equal 0, @run.backup_files.count
-    assert_empty Dir.glob(File.join(@root, "**", "*")).select { |path| File.file?(path) }
+    assert_empty Dir.glob(File.join(@root, "**", "*"), File::FNM_DOTMATCH).select { |path| File.file?(path) }
   end
 
   test "store removes the partial file when a later chunk goes over the size limit" do
@@ -75,7 +75,7 @@ class BackupStorageTest < ActiveSupport::TestCase
     end
 
     assert_equal 0, @run.backup_files.count
-    assert_empty Dir.glob(File.join(@root, "**", "*")).select { |path| File.file?(path) }
+    assert_empty Dir.glob(File.join(@root, "**", "*"), File::FNM_DOTMATCH).select { |path| File.file?(path) }
   end
 
   test "store removes the written file when the record can't be saved" do
@@ -87,7 +87,7 @@ class BackupStorageTest < ActiveSupport::TestCase
       )
     end
 
-    assert_empty Dir.glob(File.join(@root, "**", "*")).select { |path| File.file?(path) }
+    assert_empty Dir.glob(File.join(@root, "**", "*"), File::FNM_DOTMATCH).select { |path| File.file?(path) }
   end
 
 
@@ -99,9 +99,8 @@ test "store does not overwrite an existing partial file" do
     uuid_generator: -> { uuid }
   )
 
-  storage_path = File.join(@run.id.to_s, uuid)
-  final_path = storage.root.join(storage_path)
-  temp_path = Pathname("#{final_path}.partial")
+  final_path = storage.root.join("Alice-Pixel-Backups", "note.txt")
+  temp_path = final_path.dirname.join(".#{uuid}.partial")
 
   FileUtils.mkdir_p(final_path.dirname)
   File.binwrite(temp_path, "existing partial")
@@ -120,35 +119,57 @@ test "store does not overwrite an existing partial file" do
   assert_not final_path.exist?
 end
 
-  test "store does not overwrite an existing final file" do
-    # use a known UUID so the final path can be reproduced
-    uuid = SecureRandom.uuid
-    storage = BackupStorage.new(
-      root: @root,
-      uuid_generator: -> { uuid }
-    )
+  test "store preserves original filenames and numbers duplicates without overwriting" do
+    first = @storage.store(StringIO.new("first"), backup_run: @run, original_filename: "note.txt")
+    another_run = @run.device.backup_runs.create!(status: :running)
+    second = @storage.store(StringIO.new("second"), backup_run: another_run, original_filename: "note.txt")
+    assert_equal "Alice-Pixel-Backups/note.txt", first.storage_path
+    assert_equal "Alice-Pixel-Backups/note (2).txt", second.storage_path
+    assert_equal "first", File.binread(@storage.restore(first))
+    assert_equal "second", File.binread(@storage.restore(second))
+    assert_empty Dir.glob(File.join(@root, "**", ".*.partial"))
+  end
 
-    storage_path = File.join(@run.id.to_s, uuid)
-    final_path = storage.root.join(storage_path)
-    temp_path = Pathname("#{final_path}.partial")
-
-    FileUtils.mkdir_p(final_path.dirname)
-    File.binwrite(final_path, "existing backup")
-
-    # publishing the new file should fail instead of replacing the old one
-    assert_raises(Errno::EEXIST) do
-      storage.store(
-        StringIO.new("new contents"),
-        backup_run: @run,
-        original_filename: "note.txt"
-      )
+  test "readable paths still reject traversal and symlink escapes" do
+    [ "Benji-Backups/../outside.txt", "Benji-Backups/../../etc/passwd",
+      "Benji-Backups/..", "Benji-Backups/a\\b", "Benji-Backups/" ].each do |path|
+      file = BackupFile.new(backup_run: @run, storage_path: path)
+      assert_raises(BackupStorage::Error) { @storage.path_for(file) }
     end
+    Dir.mktmpdir("outside_readable") do |outside|
+      File.write(File.join(outside, "secret.txt"), "secret")
+      directory = @storage.root.join("Benji-Backups")
+      directory.mkdir
+      File.symlink(File.join(outside, "secret.txt"), directory.join("secret.txt"))
+      file = BackupFile.new(backup_run: @run, storage_path: "Benji-Backups/secret.txt")
+      assert_raises(BackupStorage::Error) { @storage.path_for(file) }
+    end
+  end
 
-    # the existing completed backup must remain untouched
-    assert_equal "existing backup", File.binread(final_path)
+  test "device renames do not break existing backup paths" do
+    first = @storage.store(StringIO.new("first"), backup_run: @run, original_filename: "photo.jpeg")
+    @run.device.update!(name: "Benji")
+    second = @storage.store(StringIO.new("second"), backup_run: @run, original_filename: "photo.jpeg")
+    assert_equal "Benji-Backups/photo.jpeg", second.storage_path
+    assert_equal "first", File.binread(@storage.restore(first))
+  end
 
-    # clean up only the temporary file created by this failed operation
-    assert_not temp_path.exist?
+  test "legacy numeric folder and UUID paths still restore" do
+    path = "#{@run.id}/#{SecureRandom.uuid}"
+    FileUtils.mkdir_p(@storage.root.join(@run.id.to_s))
+    File.binwrite(@storage.root.join(path), "hello world")
+    file = @run.backup_files.create!(original_filename: "old.txt", storage_path: path,
+      size_bytes: 11, sha256: HELLO_SHA256)
+    assert_equal "hello world", File.binread(@storage.restore(file))
+  end
+
+  test "unsafe and long device names remain single bounded directory components" do
+    @run.device.update!(name: "../" + "é" * 90)
+    file = @storage.store(StringIO.new("data"), backup_run: @run, original_filename: "é" * 200 + ".txt")
+    assert_equal 2, file.storage_path.split("/").size
+    assert_not_includes file.storage_path, ".."
+    assert_operator file.storage_path.bytesize, :<=, 255
+    assert_equal :ok, @storage.verify(file)
   end
 
     test "store creates backup files with owner-only permissions" do
@@ -172,7 +193,7 @@ end
     Dir.mktmpdir("phonevault_outside_run") do |outside_root|
       FileUtils.mkdir_p(@storage.root)
 
-      run_directory = @storage.root.join(@run.id.to_s)
+      run_directory = @storage.root.join("Alice-Pixel-Backups")
 
       # make the expected backup run directory point somewhere else
       File.symlink(outside_root, run_directory)

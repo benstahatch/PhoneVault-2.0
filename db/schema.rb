@@ -30,6 +30,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_120000) do
     t.datetime "started_at"
     t.string "status", limit: 20, null: false
     t.datetime "updated_at", null: false
+    t.string "backup_subdirectory", default: "", null: false
+    t.text "storage_root"
     t.index ["device_id"], name: "index_backup_runs_on_device_id"
     t.index ["status"], name: "index_backup_runs_on_status"
   end
