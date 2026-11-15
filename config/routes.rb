@@ -7,6 +7,9 @@ Rails.application.routes.draw do
   post "login", to: "sessions#create"
   delete "logout", to: "sessions#destroy", as: :logout
   get "trash", to: "trash#index", as: :trash
+  get "trash/retention", to: "trash_retention_settings#edit", as: :trash_retention_settings
+  post "trash/retention/confirm", to: "trash_retention_settings#confirm", as: :confirm_trash_retention_settings
+  patch "trash/retention", to: "trash_retention_settings#update", as: :update_trash_retention_settings
   patch "trash/:id/restore", to: "trash#restore", as: :restore_trash
   delete "trash/:id", to: "trash#destroy", as: :permanently_delete_trash
 

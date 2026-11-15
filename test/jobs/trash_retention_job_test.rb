@@ -4,15 +4,14 @@ class TrashRetentionJobTest < ActiveJob::TestCase
   setup do
     @environment = %w[
       PHONEVAULT_BACKUP_ROOT
-      PHONEVAULT_TRASH_RETENTION_DAYS
       PHONEVAULT_TRASH_CLEANUP_ENABLED
     ].index_with { |key| ENV[key] }
     @root = Dir.mktmpdir("phonevault_trash_retention")
     ENV["PHONEVAULT_BACKUP_ROOT"] = @root
-    ENV.delete("PHONEVAULT_TRASH_RETENTION_DAYS")
     ENV.delete("PHONEVAULT_TRASH_CLEANUP_ENABLED")
 
     @user = users(:alice)
+    @user.update!(trash_retention_days: nil)
     @device = devices(:alice_phone)
     @run = @device.backup_runs.create!(status: :completed, storage_root: @root)
     @file = store_file(@run, "expired.jpg", "temporary image bytes")
@@ -24,22 +23,13 @@ class TrashRetentionJobTest < ActiveJob::TestCase
     FileUtils.remove_entry(@root)
   end
 
-  test "retention defaults to 30 days and cleanup stays disabled by default" do
-    assert_equal 30, TrashRetention.retention_days
+  test "retention defaults to Never and automatic cleanup stays disabled by default" do
+    assert_nil @user.reload.trash_retention_days
     assert_not TrashRetention.cleanup_enabled?
   end
 
-  test "only the supported retention periods are accepted" do
-    [ "7", "30", "60", "90" ].each do |days|
-      ENV["PHONEVAULT_TRASH_RETENTION_DAYS"] = days
-      assert_equal days.to_i, TrashRetention.retention_days
-    end
-
-    ENV["PHONEVAULT_TRASH_RETENTION_DAYS"] = "14"
-    assert_raises(TrashRetention::ConfigurationError) { TrashRetention.retention_days }
-  end
-
   test "disabled cleanup leaves expired files and records untouched" do
+    @user.update!(trash_retention_days: 30)
     path = BackupStorage.for_run(@run).path_for(@file)
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
@@ -50,7 +40,18 @@ class TrashRetentionJobTest < ActiveJob::TestCase
     assert File.file?(path)
   end
 
+  test "Never keeps expired Trash files even when server cleanup is enabled" do
+    ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
+    path = BackupStorage.for_run(@run).path_for(@file)
+
+    assert_empty TrashRetentionJob.perform_now
+
+    assert @file.reload.deleted_at.present?
+    assert File.file?(path)
+  end
+
   test "dry run reports expired files without deleting bytes, records, or events" do
+    @user.update!(trash_retention_days: 30)
     path = BackupStorage.for_run(@run).path_for(@file)
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
@@ -67,6 +68,7 @@ class TrashRetentionJobTest < ActiveJob::TestCase
 
   test "enabled cleanup deletes only expired trashed files and records each success" do
     ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
+    @user.update!(trash_retention_days: 30)
     @run.update_column(:created_at, 365.days.ago)
     recent_file = store_file(@run, "recent.jpg", "recent bytes")
     recent_file.update!(deleted_at: 10.days.ago)
@@ -91,12 +93,12 @@ class TrashRetentionJobTest < ActiveJob::TestCase
     assert_equal @file.id, event.subject_id
   end
 
-  test "configured seven-day retention uses deleted_at as its cutoff" do
+  test "the user's retention period uses deleted_at as its cutoff" do
     ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
-    ENV["PHONEVAULT_TRASH_RETENTION_DAYS"] = "7"
+    @user.update!(trash_retention_days: 60)
     recently_trashed = store_file(@run, "recently-trashed.txt", "new in trash")
-    recently_trashed.update!(deleted_at: 6.days.ago)
-    @file.update!(deleted_at: 8.days.ago)
+    recently_trashed.update!(deleted_at: 59.days.ago)
+    @file.update!(deleted_at: 61.days.ago)
     old_path = BackupStorage.for_run(@run).path_for(@file)
 
     result = TrashRetentionJob.perform_now
@@ -109,10 +111,12 @@ class TrashRetentionJobTest < ActiveJob::TestCase
 
   test "cleanup uses each owner's configured storage root" do
     ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
+    @user.update!(trash_retention_days: 30)
     other_root = Dir.mktmpdir("phonevault_other_owner_backups")
     other_run = devices(:bob_phone).backup_runs.create!(status: :completed, storage_root: other_root)
+    users(:bob).update!(trash_retention_days: 60)
     other_file = store_file(other_run, "bob-expired.txt", "bob's bytes")
-    other_file.update!(deleted_at: 31.days.ago)
+    other_file.update!(deleted_at: 61.days.ago)
     other_path = BackupStorage.for_run(other_run).path_for(other_file)
 
     result = TrashRetentionJob.perform_now
@@ -129,6 +133,7 @@ class TrashRetentionJobTest < ActiveJob::TestCase
 
   test "failed filesystem deletion retains the record and logs the error" do
     ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
+    @user.update!(trash_retention_days: 30)
     log_output = StringIO.new
     original_logger = Rails.logger
     Rails.logger = ActiveSupport::Logger.new(log_output)
@@ -152,6 +157,7 @@ class TrashRetentionJobTest < ActiveJob::TestCase
 
   test "unsafe paths are skipped and logged without modifying outside files" do
     ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
+    @user.update!(trash_retention_days: 30)
     outside_path = File.join(File.dirname(@root), "phonevault-retention-sentinel-#{SecureRandom.hex(6)}")
     File.binwrite(outside_path, "keep this file")
     @file.update_column(:storage_path, "../../#{File.basename(outside_path)}")

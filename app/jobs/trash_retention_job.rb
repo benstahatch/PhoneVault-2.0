@@ -7,11 +7,10 @@ class TrashRetentionJob < ApplicationJob
 
   # Pass dry_run: true to report expired files without changing storage or rows.
   def perform(dry_run: false)
-    retention_days = TrashRetention.retention_days
-    cutoff = retention_days.days.ago
-
     if dry_run
-      return expired_files(cutoff).map { |file| preview(file, retention_days) }
+      return expired_files.find_each.map do |file|
+        preview(file, file.backup_run.device.user.trash_retention_days)
+      end
     end
 
     unless TrashRetention.cleanup_enabled?
@@ -20,18 +19,22 @@ class TrashRetentionJob < ApplicationJob
     end
 
     with_cleanup_lock do
-      expired_files(cutoff).filter_map { |file| delete_if_still_expired(file.id, cutoff, retention_days) }
+      expired_files.find_each.filter_map { |file| delete_if_still_expired(file.id) }
     end
   end
 
   private
 
-  def expired_files(cutoff)
+  def expired_files
+    clauses = User::TRASH_RETENTION_DAYS.map do
+      "(users.trash_retention_days = ? AND backup_files.deleted_at <= ?)"
+    end
+    binds = User::TRASH_RETENTION_DAYS.flat_map { |days| [ days, days.days.ago ] }
+
     BackupFile.trashed
       .joins(backup_run: { device: :user })
       .includes(backup_run: { device: :user })
-      .where("backup_files.deleted_at <= ?", cutoff)
-      .order(:id)
+      .where(clauses.join(" OR "), *binds)
   end
 
   def preview(file, retention_days)
@@ -43,20 +46,23 @@ class TrashRetentionJob < ApplicationJob
     result(file, "would_fail", retention_days, error.message)
   end
 
-  def delete_if_still_expired(file_id, cutoff, retention_days)
+  def delete_if_still_expired(file_id)
     BackupFile.transaction do
       file = BackupFile.joins(backup_run: { device: :user })
         .where(id: file_id)
-        .where.not(deleted_at: nil)
-        .where("backup_files.deleted_at <= ?", cutoff)
+        .trashed
         .lock
         .first
       next unless file
 
+      owner = User.lock.find(file.backup_run.device.user_id)
+      retention_days = owner.trash_retention_days
+      next unless User::TRASH_RETENTION_DAYS.include?(retention_days)
+      next if file.deleted_at > retention_days.days.ago
+
       storage = backup_storage_for(file.backup_run)
       storage.permanently_delete(file)
 
-      owner = file.backup_run.device.user
       event = SecurityEvent.new(
         user: owner,
         subject: file,

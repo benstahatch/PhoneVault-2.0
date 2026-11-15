@@ -1,15 +1,18 @@
-# Environment-backed settings for automatic removal of expired Trash entries.
+# Server-level switch and shared date/query helpers for Trash retention.
 class TrashRetention
-  RETENTION_DAYS = [ 7, 30, 60, 90 ].freeze
-  DEFAULT_DAYS = 30
+  def self.expired_files_for(user, retention_days)
+    return BackupFile.none unless User::TRASH_RETENTION_DAYS.include?(retention_days)
 
-  class ConfigurationError < StandardError; end
+    BackupFile.joins(backup_run: :device)
+      .where(devices: { user_id: user.id })
+      .trashed
+      .where("backup_files.deleted_at <= ?", retention_days.days.ago)
+  end
 
-  def self.retention_days
-    value = Integer(ENV.fetch("PHONEVAULT_TRASH_RETENTION_DAYS", DEFAULT_DAYS.to_s), exception: false)
-    return value if RETENTION_DAYS.include?(value)
+  def self.expiration_at(deleted_at, retention_days)
+    return if retention_days.nil?
 
-    raise ConfigurationError, "PHONEVAULT_TRASH_RETENTION_DAYS must be one of #{RETENTION_DAYS.join(', ')}"
+    deleted_at + retention_days.days
   end
 
   def self.cleanup_enabled?
