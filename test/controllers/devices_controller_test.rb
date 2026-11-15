@@ -61,6 +61,8 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     event = SecurityEvent.order(:id).last
     assert_equal "DEVICE_REGISTERED", event.event_type
     assert_equal users(:alice), event.user
+    assert_equal Device.find_by(name: "Alice Tablet"), event.subject
+    assert_equal "Alice Tablet (tablet)", event.details
   end
 
   test "create records no event when the device is invalid" do
@@ -139,6 +141,7 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
 
   test "update records DEVICE_RENAMED for the current user" do
     sign_in_as users(:alice)
+    old_name = devices(:alice_phone).name
 
     assert_difference("SecurityEvent.count", 1) do
       patch device_path(devices(:alice_phone)), params: { device: { name: "Work Phone" } }
@@ -147,6 +150,8 @@ class DevicesControllerTest < ActionDispatch::IntegrationTest
     event = SecurityEvent.last
     assert_equal "DEVICE_RENAMED", event.event_type
     assert_equal users(:alice), event.user
+    assert_equal devices(:alice_phone), event.subject
+    assert_equal "#{old_name} → Work Phone", event.details
   end
 
   test "update records no event when the rename is rejected" do

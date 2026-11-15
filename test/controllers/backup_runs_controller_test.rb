@@ -192,6 +192,8 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
     event = SecurityEvent.order(:id).last
     assert_equal "BACKUP_SUCCESS", event.event_type
     assert_equal users(:alice), event.user
+    assert_equal run.backup_files.last, event.subject
+    assert_equal "sample_backup.txt to #{device.name}", event.details
   end
 
   test "a failure to record BACKUP_SUCCESS does not mark a stored backup failed" do
@@ -274,6 +276,27 @@ class BackupRunsControllerTest < ActionDispatch::IntegrationTest
   end
 end
 
+  test "a very long filename is shortened in the event details instead of failing" do
+    sign_in_as users(:alice)
+    device = devices(:alice_phone)
+    long_name = "#{"a" * 246}.txt"
+    file = Rack::Test::UploadedFile.new(StringIO.new("hello"), "text/plain", original_filename: long_name)
+
+    Dir.mktmpdir("phonevault_long_name") do |root|
+      previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
+      ENV["PHONEVAULT_BACKUP_ROOT"] = root
+      post device_backup_runs_path(device), params: { backup_run: { file: file } }
+    ensure
+      ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
+    end
+
+    assert device.backup_runs.order(:created_at).last.completed?
+    event = SecurityEvent.order(:id).last
+    assert_equal "BACKUP_SUCCESS", event.event_type
+    assert_equal 255, event.details.length
+    assert event.details.end_with?("...")
+  end
+
   test "create rejects a file over the upload limit and records BACKUP_FAILED" do
     sign_in_as users(:alice)
     device = devices(:alice_phone)
@@ -299,7 +322,10 @@ end
     assert device.backup_runs.order(:created_at).last.failed?
     assert_redirected_to device_backup_runs_path(device)
     assert_equal "File is larger than the 1 MB upload limit.", flash[:alert]
-    assert_equal "BACKUP_FAILED", SecurityEvent.order(:id).last.event_type
+    event = SecurityEvent.order(:id).last
+    assert_equal "BACKUP_FAILED", event.event_type
+    assert_equal device.backup_runs.order(:created_at).last, event.subject
+    assert_equal "too_big.txt to #{device.name} (over the size limit)", event.details
   end
 
   private

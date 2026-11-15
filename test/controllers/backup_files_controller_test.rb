@@ -71,6 +71,8 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
         event = SecurityEvent.order(:id).last
         assert_equal "FILE_RESTORED", event.event_type
         assert_equal users(:alice), event.user
+        assert_equal backup_file, event.subject
+        assert_equal "#{backup_file.original_filename} from #{device.name}", event.details
       ensure
         if previous_root
           ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
@@ -119,6 +121,8 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
         event = SecurityEvent.order(:id).last
         assert_equal "RESTORE_FILE_MISSING", event.event_type
         assert_equal users(:alice), event.user
+        assert_equal backup_file, event.subject
+        assert_equal "#{backup_file.original_filename} from #{device.name}", event.details
       ensure
         if previous_root
           ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
@@ -170,6 +174,8 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
         event = SecurityEvent.order(:id).last
         assert_equal "RESTORE_FILE_CORRUPTED", event.event_type
         assert_equal users(:alice), event.user
+        assert_equal backup_file, event.subject
+        assert_equal "#{backup_file.original_filename} from #{device.name}", event.details
       ensure
         if previous_root
           ENV["PHONEVAULT_BACKUP_ROOT"] = previous_root
