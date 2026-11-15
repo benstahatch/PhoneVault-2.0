@@ -218,7 +218,8 @@ class BackupFilesControllerTest < ActionDispatch::IntegrationTest
         assert_equal original_hash, file.sha256
         assert_equal original_path, BackupStorage.new.path_for(file)
         assert_equal "keep these bytes", File.binread(original_path)
-        assert_equal "FILE_TRASHED", SecurityEvent.order(:id).last.event_type
+        event = SecurityEvent.order(:id).last
+        assert_equal [ "FILE_TRASHED", file, "keep.txt from #{device.name}" ], [ event.event_type, event.subject, event.details ]
       ensure
         before_root ? ENV["PHONEVAULT_BACKUP_ROOT"] = before_root : ENV.delete("PHONEVAULT_BACKUP_ROOT")
       end

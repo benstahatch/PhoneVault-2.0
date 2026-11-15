@@ -9,27 +9,19 @@ class BackupFilesController < ApplicationController
   rescue_from BackupStorage::MissingFile, with: :missing_file
   rescue_from BackupStorage::CorruptedFile, with: :corrupted_file
 
-def restore
-  # verify the file and return its safe path on disk
-  path = BackupStorage.for_run(@backup_run).restore(@backup_file)
+  def restore
+    # raises MissingFile or CorruptedFile (handled below) unless the size and sha-256 match
+    path = BackupStorage.for_run(@backup_run).restore(@backup_file)
+    record_security_event("FILE_RESTORED", current_user, subject: @backup_file, details: @backup_file.summary)
 
-  # only reached when the file exists and its sha-256 matches
-  record_security_event("FILE_RESTORED", current_user, subject: @backup_file, details: file_details)
-
-  # sanitize the user-provided filename before sending it to the browser
-  safe_filename = ActiveStorage::Filename
-    .new(@backup_file.original_filename)
-    .sanitized
-
-  # send the verified file back using the sanitized filename
-  send_file path.to_s,
-    filename: safe_filename,
-    disposition: "attachment"
-end
+    # the filename came from the user, so sanitize it before it goes into a response header
+    send_file path.to_s, filename: ActiveStorage::Filename.new(@backup_file.original_filename).sanitized,
+      disposition: "attachment"
+  end
 
   def destroy
     @backup_file.update!(deleted_at: Time.current)
-    record_security_event("FILE_TRASHED", current_user)
+    record_security_event("FILE_TRASHED", current_user, subject: @backup_file, details: @backup_file.summary)
 
     redirect_to device_backup_runs_path(@device),
       notice: "#{@backup_file.original_filename} moved to Trash.",
@@ -53,10 +45,6 @@ end
 
   private
 
-  def file_details
-    "#{@backup_file.original_filename} from #{@device.name}"
-  end
-
   # each lookup is scoped to the one before it: user → device → run → active file
   def set_backup_file
     @backup_run = @device.backup_runs.find(params[:backup_run_id])
@@ -65,14 +53,14 @@ end
 
   def missing_file
     # return to backup history if the stored file no longer exists
-    record_security_event("RESTORE_FILE_MISSING", current_user, subject: @backup_file, details: file_details)
+    record_security_event("RESTORE_FILE_MISSING", current_user, subject: @backup_file, details: @backup_file.summary)
     redirect_to device_backup_runs_path(@device),
       alert: "Backup file is missing from storage."
   end
 
   def corrupted_file
     # return to backup history if the stored file fails sha-256 verification
-    record_security_event("RESTORE_FILE_CORRUPTED", current_user, subject: @backup_file, details: file_details)
+    record_security_event("RESTORE_FILE_CORRUPTED", current_user, subject: @backup_file, details: @backup_file.summary)
     redirect_to device_backup_runs_path(@device),
       alert: "Backup file failed integrity verification."
   end

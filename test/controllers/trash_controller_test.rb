@@ -115,7 +115,8 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil original_deleted_at
     assert_equal "image bytes", File.binread(original_path)
     assert_equal :ok, BackupStorage.for_run(@run).verify(@file)
-    assert_equal "FILE_RECOVERED_FROM_TRASH", SecurityEvent.order(:id).last.event_type
+    event = SecurityEvent.order(:id).last
+    assert_equal [ "FILE_RECOVERED_FROM_TRASH", @file, "family-photo.jpg from #{@device.name}" ], [ event.event_type, event.subject, event.details ]
   end
 
   test "users cannot view or restore another user's trashed files" do
@@ -157,7 +158,8 @@ class TrashControllerTest < ActionDispatch::IntegrationTest
     assert_equal "family-photo.jpg was permanently deleted.", flash[:notice]
     assert_not File.exist?(stored_path)
     assert_equal "other bytes", File.binread(BackupStorage.for_run(@run).path_for(second_file))
-    assert_equal "FILE_PERMANENTLY_DELETED", SecurityEvent.order(:id).last.event_type
+    event = SecurityEvent.order(:id).last
+    assert_equal [ "FILE_PERMANENTLY_DELETED", "family-photo.jpg from #{@device.name}" ], [ event.event_type, event.details ]
 
     assert_no_difference [ "BackupFile.count", "SecurityEvent.count" ] do
       delete trashed_file_path(@file)

@@ -11,4 +11,9 @@ class BackupFile < ApplicationRecord
     presence: true,
     length: { is: 64 },
     format: { with: /\A[0-9a-f]{64}\z/i }
+
+  # "photo.jpg from Jordan's iPhone", for security event details
+  def summary
+    "#{original_filename} from #{backup_run.device.name}"
+  end
 end

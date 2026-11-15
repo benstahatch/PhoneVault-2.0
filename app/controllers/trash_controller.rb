@@ -11,7 +11,7 @@ class TrashController < ApplicationController
   def restore
     file = current_user.backup_files.trashed.find(params[:id])
     file.update!(deleted_at: nil)
-    record_security_event("FILE_RECOVERED_FROM_TRASH", current_user)
+    record_security_event("FILE_RECOVERED_FROM_TRASH", current_user, subject: file, details: file.summary)
 
     redirect_to trashed_files_path,
       notice: "#{file.original_filename} restored to backup history.",
@@ -20,17 +20,15 @@ class TrashController < ApplicationController
 
   def destroy
     file = current_user.backup_files.trashed.find(params[:id])
-    storage = BackupStorage.for_run(file.backup_run)
-    storage.permanently_delete(file)
-    filename = file.original_filename
+    BackupStorage.for_run(file.backup_run).permanently_delete(file)
 
     BackupFile.transaction do
       file.destroy!
-      record_security_event("FILE_PERMANENTLY_DELETED", current_user)
+      record_security_event("FILE_PERMANENTLY_DELETED", current_user, subject: file, details: file.summary)
     end
 
     redirect_to trashed_files_path,
-      notice: "#{filename} was permanently deleted.",
+      notice: "#{file.original_filename} was permanently deleted.",
       status: :see_other
   rescue BackupStorage::MissingFile
     redirect_to trashed_files_path, alert: "Backup file is missing from storage. The Trash record was kept."
