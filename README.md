@@ -6,19 +6,23 @@ The long-term idea is to provide a simple way for someone to run their own priva
 
 ---
 
-# Current Goal — v0.1
+# Version 1
 
-PhoneVault v0.1 should be able to:
+PhoneVault version 1 can:
 
-- [x] Run on a Linux machine.
+- [x] Run on a Linux machine, either fully in Docker or with Rails on the host.
 - [x] Use a local username and password.
-- [x] Register one or more personal devices.
-- [x] Upload and store individual files through the browser.
+- [x] Register, list, and rename personal devices.
+- [x] Upload and store individual files through the browser, into a default or chosen server folder.
 - [x] Calculate a SHA-256 hash for stored files.
 - [x] Store file and backup metadata in MySQL.
 - [x] Track completed and failed backup attempts.
+- [x] Show backup history with image thumbnails and text previews.
 - [x] Restore individual files through the browser.
 - [x] Verify stored file size and SHA-256 before downloading a restore.
+- [x] Move files to Trash, recover them, or delete them permanently.
+- [x] Let each user choose how long Trash keeps files, with an opt-in scheduled cleanup.
+- [x] Show a dashboard summary and each user's own security activity.
 - [x] Prevent users from restoring backup files that belong to another user.
 - [x] Reject invalid storage paths and symlink escapes outside the backup root.
 
@@ -38,20 +42,13 @@ Automatic phone synchronization, scheduled backups, additional storage backends,
 | Docker              | Runs MySQL in development                                                            |
 | Docker Compose      | Starts and configures the development database                                       |
 | Linux               | Current server/development host                                                      |
+| Solid Queue         | Runs the daily Trash retention cleanup job                                           |
 | Minitest            | Automated Rails testing                                                              |
 | RuboCop             | Ruby style and lint checks                                                           |
 | Brakeman            | Rails security scanning                                                              |
 | Tailscale           | Optional private remote access between trusted devices                               |
 
-## Planned / Later
-
-- Solid Queue for background backup jobs
-- Storage abstraction for multiple storage backends
-- MinIO / S3-compatible storage
-- Restic for disaster recovery
-- Prometheus and Grafana for monitoring
-- Redis / Sidekiq as a later comparison experiment
-- Python / PySpark only for later analytics experiments
+Planned additions are listed in the [ToDo](#todo).
 
 ---
 
@@ -141,6 +138,7 @@ Current schema fields:
 - `username`
 - `display_name`
 - `password_digest`
+- `trash_retention_days` _(30, 60, or 90; blank means Never)_
 - `created_at`
 - `updated_at`
 
@@ -165,8 +163,7 @@ Current schema fields:
 
 - `id` _(PK)_
 - `device_id` _(FK -> devices.id)_
-- `storage_root` _(saved absolute destination)_
-- `backup_subdirectory` _(legacy relative destination)_
+- `storage_root` _(saved absolute destination; blank means the default backup root)_
 - `status`
 - `started_at`
 - `completed_at`
@@ -185,6 +182,7 @@ Current schema fields:
 - `storage_path`
 - `size_bytes`
 - `sha256`
+- `deleted_at` _(set when moved to Trash; blank means active)_
 - `created_at`
 - `updated_at`
 
@@ -216,6 +214,9 @@ Events are recorded automatically with the user (when known) and the request's I
 | `BACKUP_SUCCESS` | An uploaded file is stored and its backup run is marked completed. | Backup file | `IMG_2041.png to Jordan's iPhone` |
 | `BACKUP_FAILED` | Storing an uploaded file fails (including uploads over the size limit) and its backup run is marked failed. | Backup run | `video.mov to Jordan's iPhone (over the size limit)` |
 | `FILE_RESTORED` | A file passes its size and SHA-256 checks and is sent for download. | Backup file | `IMG_2041.png from Jordan's iPhone` |
+| `FILE_TRASHED` | A user moves a file to Trash. | Backup file | `IMG_2041.png from Jordan's iPhone` |
+| `FILE_RECOVERED_FROM_TRASH` | A user recovers a file from Trash. | Backup file | `IMG_2041.png from Jordan's iPhone` |
+| `FILE_PERMANENTLY_DELETED` | A user deletes a file from Trash, or the retention cleanup removes it. | Backup file | `IMG_2041.png from Jordan's iPhone` |
 | `RESTORE_FILE_MISSING` | A restore is requested but the file is missing from storage. | Backup file | `IMG_2041.png from Jordan's iPhone` |
 | `RESTORE_FILE_CORRUPTED` | A restore is requested but the file fails SHA-256 verification. | Backup file | `IMG_2041.png from Jordan's iPhone` |
 
@@ -293,7 +294,13 @@ Save metadata in MySQL
 Mark Backup Complete
 ```
 
-PhoneVault stores new files under a readable device folder using a sanitized original filename, such as `Benji-Backups/photo.jpeg`. Duplicate names receive numbered suffixes; existing UUID-named backups remain supported.
+## Choosing a save folder
+
+**Save path** on the upload form accepts any existing server folder PhoneVault can write to, and starts at your default folder (`<backup root>/users/<your id>`). **Browse folders** picks a directory without clearing the chosen file, and **Test path** checks write access.
+
+Files are stored as `<Device>-Backups/<filename>` inside that folder, such as `Benji-Backups/photo.jpeg`. Unsafe characters are sanitized, and a repeated name gets a numbered suffix such as `photo (2).jpeg` instead of overwriting the earlier backup.
+
+Each backup run remembers its folder, so keep that path available when moving the server. In Docker, choose a mounted container path (the default is `/rails/storage/backups`); additional host folders need a volume mount and write permission for UID 1000.
 
 ## Upload size limit
 
@@ -511,19 +518,7 @@ cp .env.example .env
 chmod 600 .env
 ```
 
-Edit `.env` and configure the database values.
-
-| Setting                  | Typical development value | Purpose                                           |
-| ------------------------ | ------------------------- | ------------------------------------------------- |
-| `MYSQL_ROOT_PASSWORD`    | Replace the example value | MySQL administrator password                      |
-| `MYSQL_DATABASE`         | `phonevault2`             | Main PhoneVault development database              |
-| `MYSQL_USER`             | `phonevault2`             | MySQL account used by Rails                       |
-| `MYSQL_PASSWORD`         | Replace the example value | Password for the Rails database account           |
-| `MYSQL_HOST_PORT`        | `3308`                    | Host port mapped to MySQL container port `3306`   |
-| `DB_HOST`                | `127.0.0.1` when used     | Database host for Rails                           |
-| `PHONEVAULT_BACKUP_ROOT` | Optional                  | Absolute path where backup bytes should be stored |
-| `PHONEVAULT_MAX_UPLOAD_MB` | Optional, `10240` (10 GB) | Largest upload PhoneVault will store, in MB     |
-| `PHONEVAULT_TRASH_CLEANUP_ENABLED` | Optional, `false` | Set to `true` to enable scheduled permanent deletion |
+Edit `.env` and set the values listed under [Configuration](#configuration).
 
 Keep `.env` private. Do not commit real passwords or credentials.
 
@@ -543,7 +538,7 @@ If it is not set, normal development storage defaults to:
 storage/backups/
 ```
 
-inside the PhoneVault repository.
+inside the PhoneVault repository. Set `PHONEVAULT_BACKUP_ROOT` to use another Linux directory instead.
 
 Tests use their own temporary storage under:
 
@@ -568,8 +563,9 @@ Restart the production app after changing the environment. To disable automatic 
 
 When server-level cleanup is disabled, users can still save their preference,
 but PhoneVault will show that no automatic deletion will occur. The Trash page
-shows each file's days remaining and exact expiration date. Users must confirm
-the setting change after reviewing any files that are already eligible.
+shows each file's days remaining and exact expiration date. When cleanup is
+enabled, choosing a period first lists the files it would make eligible, and
+the change must be confirmed.
 
 Preview the eligible files without changing anything:
 
@@ -586,8 +582,6 @@ PHONEVAULT_TRASH_CLEANUP_ENABLED=true bin/rails phonevault:trash:cleanup
 The job uses each backup run's configured server storage root and the same
 path, symlink, size, and SHA-256 checks as manual permanent deletion. Failed
 deletions remain in Trash and are logged for review.
-
-You can point PhoneVault at another Linux directory without changing Ruby source code.
 
 ## Storage Choices
 
@@ -705,19 +699,7 @@ A future storage check should detect this and refuse to silently write to the wr
 
 # Docker Storage: Current and Future
 
-## Development setup (Rails on the host)
-
-In the development setup, Rails runs directly on Linux and MySQL runs in Docker.
-
-Therefore:
-
-```text
-PHONEVAULT_BACKUP_ROOT=/mnt/phonevault-backups
-```
-
-currently refers directly to that Linux host path.
-
-No Docker bind mount is required in this setup because Rails is not running inside a container.
+When Rails runs on the host, `PHONEVAULT_BACKUP_ROOT` is simply a host path and no bind mount is needed.
 
 ## Containerized Rails setup
 
@@ -886,23 +868,7 @@ Sign into the same Tailscale network and enable the connection.
 
 ## 3. Start Rails for remote access
 
-On the Linux PhoneVault server:
-
-```bash
-bin/rails server -b 0.0.0.0
-```
-
-Then open:
-
-```text
-http://100.x.x.x:3000
-```
-
-using the server's actual Tailscale address from:
-
-```bash
-tailscale ip -4
-```
+Start Rails with `-b 0.0.0.0` as in [LAN or Tailscale access](#lan-or-tailscale-access), then open `http://100.x.x.x:3000` using the address from `tailscale ip -4`.
 
 PhoneVault authentication is still required. Tailscale does not replace the PhoneVault username/password system.
 
@@ -967,14 +933,7 @@ This was verified with a full reboot of the Raspberry Pi server: PhoneVault came
 
 ## Development startup
 
-When working on the code, start the pieces by hand so logs stay visible:
-
-| Stage          | Command or action                               | Ready when                                           |
-| -------------- | ----------------------------------------------- | ---------------------------------------------------- |
-| Database       | `docker compose up -d db`                       | The MySQL container is running and ready             |
-| Rails database | `bin/rails db:prepare`                          | The command completes without error                  |
-| Application    | `bin/rails server -b 127.0.0.1` or `-b 0.0.0.0` | Rails reports that it is listening on port `3000`    |
-| Browser        | Open the matching Linux/LAN/Tailscale address   | Login, device registration, upload, and restore work |
+When working on the code, start the pieces by hand so logs stay visible: [Start MySQL](#start-mysql), then [Start PhoneVault](#start-phonevault).
 
 ---
 
@@ -1123,42 +1082,23 @@ fix the README too
 
 # Configuration
 
-| Variable                 | Example/default               | Purpose                                   |
-| ------------------------ | ----------------------------- | ----------------------------------------- |
-| `MYSQL_ROOT_PASSWORD`    | Replace the example value     | MySQL administrator password              |
-| `MYSQL_DATABASE`         | `phonevault2`                 | Main development database                 |
-| `MYSQL_USER`             | `phonevault2`                 | MySQL application account                 |
-| `MYSQL_PASSWORD`         | Replace the example value     | Application account password              |
-| `MYSQL_HOST_PORT`        | `3308`                        | Host port mapped to container port `3306` |
-| `DB_HOST`                | `127.0.0.1` when used         | Rails database host                       |
+| Variable | Example/default | Purpose |
+| --- | --- | --- |
+| `MYSQL_ROOT_PASSWORD` | Replace the example value | MySQL administrator password |
+| `MYSQL_DATABASE` | `phonevault2` | Main development database |
+| `MYSQL_USER` | `phonevault2` | MySQL application account |
+| `MYSQL_PASSWORD` | Replace the example value | Application account password |
+| `MYSQL_HOST_PORT` | `3308` | Host port mapped to container port `3306` |
+| `DB_HOST` | `127.0.0.1` when used | Rails database host |
 | `PHONEVAULT_BACKUP_ROOT` | `storage/backups/` when unset | Optional absolute path for backup storage |
-| `PHONEVAULT_MAX_UPLOAD_MB` | `10240` (10 GB) when unset  | Optional upload size limit in whole megabytes |
+| `PHONEVAULT_MAX_UPLOAD_MB` | `10240` (10 GB) when unset | Optional upload size limit in whole megabytes |
+| `PHONEVAULT_TRASH_CLEANUP_ENABLED` | `false` | Set to `true` to let the scheduled job permanently delete expired Trash |
 | `PHONEVAULT_PORT` | `8080` when unset | Port the Docker app is served on |
 | `SECRET_KEY_BASE` | Generated by `launch.py` | Rails secret used in production (Docker) |
 
 ---
 
 # ToDo
-
-The long-term setup goal is:
-
-```text
-git clone
-    |
-    v
-configure .env
-    |
-    v
-choose backup location
-    |
-    v
-start PhoneVault
-    |
-    v
-PhoneVault works
-```
-
-Advanced storage, remote access, and monitoring should add capability without making the basic setup unnecessarily complicated.
 
 ## Database Design
 
@@ -1182,7 +1122,6 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Test setup from a completely fresh Linux clone.
 - [x] Test setup on another Linux machine.
 - [x] Fix any README commands that fail during a fresh setup.
-- [x] Finalize the supported permanent deployment method.
 
 ## Authentication and Security
 
@@ -1191,14 +1130,12 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Add login and logout.
 - [x] Protect authenticated pages by default.
 - [x] Prevent users from accessing devices/backups they do not own.
-- [x] Verify file size and SHA-256 before restore.
-- [x] Validate internal storage paths.
-- [x] Reject symlink escapes outside the backup root.
-- [x] Prevent partial/final backup file collisions from overwriting existing data.
+- [x] Validate storage paths and reject traversal and symlink escapes.
 - [x] Create private backup files.
 - [x] Run Brakeman security scanning in CI.
 - [x] Add login rate limiting.
 - [x] Add automatic security-event logging.
+- [x] Show each user their own activity, with warnings highlighted.
 - [x] Limit the size of stored uploads with `PHONEVAULT_MAX_UPLOAD_MB`.
 - [ ] Reject oversized upload requests before Rails receives the whole body.
 - [ ] Decide whether to log `AUTHORIZATION_DENIED` for requests to records the user does not own.
@@ -1226,10 +1163,12 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Record file sizes.
 - [x] Associate backup files with backup runs.
 - [x] Track successful and failed backup runs.
-- [x] Use readable device folders and safe filenames, with legacy UUID support.
+- [x] Use readable device folders and safe filenames.
+- [x] Let users choose any writable server folder for a backup.
 - [x] Use partial files before publishing a completed backup.
 - [x] Prevent existing completed backup files from being overwritten.
-- [x] Verify the complete backup workflow from a fresh Linux installation.
+- [x] Move deleted backups to Trash, with recovery and permanent deletion.
+- [x] Add per-user Trash retention with an opt-in scheduled cleanup.
 
 ## Restore System
 
@@ -1239,7 +1178,6 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Verify restored files using file size and SHA-256.
 - [x] Handle missing stored files.
 - [x] Handle corrupted stored files.
-- [x] Reject path traversal and symlink escapes.
 - [x] Improve backup-history presentation and file details.
 - [x] Verify the complete browser backup -> restore workflow from a fresh installation.
 
@@ -1249,15 +1187,12 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Store backup bytes separately from MySQL metadata.
 - [x] Document local, `/srv`, and `/mnt` storage choices.
 - [x] Explain the difference between another directory and another physical disk.
-- [x] Add `PHONEVAULT_BACKUP_ROOT` to the example environment file.
 - [ ] Decide on the recommended permanent Linux storage directory.
 - [ ] Detect/report unavailable storage.
-- [ ] Detect when an expected external mount is missing.
-- [ ] Prevent accidental system-disk fallback when the external mount is missing.
+- [ ] Detect a missing external mount and refuse uploads instead of falling back to the system disk.
 - [ ] Improve errors when an external disk is disconnected.
 - [ ] Research startup ordering when an external disk mounts after boot.
-- [ ] Display total disk capacity.
-- [ ] Display used/available disk capacity.
+- [ ] Display total, used, and available disk capacity.
 - [x] Display PhoneVault storage usage.
 - [x] Display the number of stored backup files.
 - [ ] Build the storage dashboard.
@@ -1277,11 +1212,8 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Test failed backup scenarios.
 - [x] Test path traversal protection.
 - [x] Test symlink escape protection.
-- [x] Test partial-file collision protection.
-- [x] Test completed-file collision protection.
+- [x] Test partial- and completed-file collision protection.
 - [x] Test private file permissions.
-- [ ] Follow the README from a clean environment and record failed commands/errors.
-- [x] Test project/setup scripts from a fresh clone.
 
 ## Linux Deployment and Remote Access
 
@@ -1290,11 +1222,9 @@ Advanced storage, remote access, and monitoring should add capability without ma
 - [x] Add optional Tailscale access.
 - [x] Verify PhoneVault through Tailscale.
 - [x] Keep MySQL bound locally rather than exposing it directly to the public internet.
-- [ ] Validate the full documented procedure on a clean Linux installation.
 - [x] Decide on the permanent deployment method.
 - [x] Add automatic startup after Linux reboot.
 - [x] Verify MySQL readiness before Rails depends on it.
-- [ ] Verify the configured backup disk is mounted before uploads are accepted.
 - [x] Evaluate Docker restart policies.
 - [x] Evaluate systemd where appropriate (not needed; Docker restart policies cover it).
 - [x] Test a full reboot and confirm PhoneVault returns with the correct storage.
@@ -1306,11 +1236,9 @@ Advanced storage, remote access, and monitoring should add capability without ma
 
 - [x] Document that one server or disk can still fail.
 - [x] Explain the benefit of separating backup bytes onto another physical disk.
-- [ ] Document a full recovery procedure for MySQL metadata plus backup bytes.
 - [ ] Research Restic for PhoneVault disaster recovery.
 - [ ] Research another independent/off-site backup copy.
-- [ ] Later evaluate MinIO / S3-compatible storage.
-- [ ] Document how to rebuild PhoneVault after losing the application server.
+- [ ] Document how to rebuild PhoneVault from a MySQL backup plus the backup bytes after losing the server.
 
 ## Documentation and Due Diligence
 
@@ -1326,7 +1254,7 @@ Advanced storage, remote access, and monitoring should add capability without ma
 
 ## V3 — Background Jobs
 
-- [ ] Introduce Solid Queue.
+- [x] Introduce Solid Queue (it runs the daily Trash retention cleanup).
 - [ ] Move appropriate backup processing out of the web request.
 - [ ] Compare background-job behavior with the current synchronous flow.
 - [ ] Later experiment with Redis / Sidekiq for comparison.
@@ -1340,7 +1268,6 @@ Advanced storage, remote access, and monitoring should add capability without ma
 
 ## V3 — Disaster Recovery and Monitoring
 
-- [ ] Research Restic integration.
 - [ ] Research Prometheus metrics.
 - [ ] Add Grafana when useful operational metrics exist.
 - [ ] Keep monitoring optional for the basic PhoneVault install.
@@ -1356,9 +1283,6 @@ Advanced storage, remote access, and monitoring should add capability without ma
 
 ## Future Research
 
-- [ ] 2FA.
-- [ ] Recovery codes.
-- [ ] Device API tokens.
 - [ ] File deduplication.
 - [ ] Encryption improvements.
 - [ ] WebDAV.
@@ -1394,22 +1318,3 @@ restore
 ```
 
 More advanced infrastructure should add capability without making the beginner setup unnecessarily complicated.
-
-## Choosing a save folder for an upload
-
-**Save path** accepts any existing server folder writable by PhoneVault.
-**Browse folders** selects a directory without clearing the chosen file;
-**Test path** checks write access. Successful uploads show a green confirmation.
-
-New backups use readable paths such as `Benji-Backups/photo.jpeg` inside the
-selected folder. Duplicate filenames receive numbered suffixes, such as
-`photo (2).jpeg`, without overwriting earlier backups. Unsafe characters are
-sanitized. Existing numbered folders and UUID filenames remain restorable.
-
-Each backup remembers its destination. Keep that path available when moving the
-server. In Docker, select a mounted container path (the default is
-`/rails/storage/backups`); additional host folders need a volume mount and write
-permissions for UID 1000. Restore downloads use your browser's download settings.
-
-Run `bin/rails db:migrate` in the app's runtime after updating. Existing backup
-files are not moved.

@@ -16,9 +16,7 @@ class SessionsController < ApplicationController
     )
 
     if user
-      reset_session
-      session[:user_id] = user.id
-
+      start_session(user)
       record_security_event("LOGIN_SUCCESS", user)
       redirect_to dashboard_path, notice: "Logged in successfully."
     else

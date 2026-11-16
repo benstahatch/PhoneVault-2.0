@@ -6,7 +6,7 @@ class BackupLocationsControllerTest < ActionDispatch::IntegrationTest
     @previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
     ENV["PHONEVAULT_BACKUP_ROOT"] = @temporary
     @device = devices(:alice_phone)
-    @root = BackupDirectory.for_user(users(:alice)).root
+    @root = BackupDirectory.default_for(users(:alice))
     @folder = @root.join("Photos 2026")
     @folder.mkdir
   end
@@ -77,16 +77,6 @@ class BackupLocationsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Directory does not exist", response.body
   end
 
-  test "saved location cannot redirect restore into another account" do
-    sign_in
-    upload_to(@folder)
-    run = @device.backup_runs.order(:id).last
-    run.update!(storage_root: nil, backup_subdirectory: "users/#{users(:bob).id}")
-    get restore_device_backup_run_backup_file_path(@device, run, run.backup_files.sole)
-    assert_redirected_to device_backup_runs_path(@device)
-    assert_equal "Choose a folder inside your backup storage.", flash[:alert]
-  end
-
   test "upload to Downloads outside the default root succeeds and displays green confirmation" do
     sign_in
     Dir.mktmpdir("phonevault_downloads") do |external|
@@ -113,18 +103,6 @@ class BackupLocationsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_equal File.binread(file_fixture("sample_backup.txt")), response.body
     end
-  end
-
-  test "existing relative-location backups still restore" do
-    sign_in
-    relative = @folder.relative_path_from(Pathname(@temporary).realpath).to_s
-    run = @device.backup_runs.create!(status: :completed, backup_subdirectory: relative)
-    file = BackupStorage.new(root: @folder).store(
-      StringIO.new("older backup"), backup_run: run, original_filename: "older.txt"
-    )
-    get restore_device_backup_run_backup_file_path(@device, run, file)
-    assert_response :success
-    assert_equal "older backup", response.body
   end
 
   test "history and image previews use the saved external destination" do

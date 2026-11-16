@@ -3,10 +3,7 @@ class TrashRetention
   def self.expired_files_for(user, retention_days)
     return BackupFile.none unless User::TRASH_RETENTION_DAYS.include?(retention_days)
 
-    BackupFile.joins(backup_run: :device)
-      .where(devices: { user_id: user.id })
-      .trashed
-      .where("backup_files.deleted_at <= ?", retention_days.days.ago)
+    user.backup_files.trashed.where(deleted_at: ..retention_days.days.ago)
   end
 
   def self.expiration_at(deleted_at, retention_days)

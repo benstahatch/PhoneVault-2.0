@@ -1,5 +1,5 @@
 class BackupRunsController < ApplicationController
-  before_action :set_device
+  include DeviceScoped
 
   def index
     runs = @device.backup_runs.includes(:active_backup_files).order(created_at: :desc, id: :desc).to_a
@@ -9,32 +9,21 @@ class BackupRunsController < ApplicationController
 
   def new
     @backup_run = @device.backup_runs.new
-    begin
-      initial_path = params[:save_path].presence || BackupDirectory.for_user(current_user).root.to_s
-      @save_path = BackupDirectory.server.resolve!(initial_path).to_s
-    rescue BackupDirectory::Error => error
-      @backup_run.errors.add(:base, error.message)
-    end
+    @save_path = BackupDirectory.resolve_or_default!(params[:save_path], current_user).to_s
+  rescue BackupDirectory::Error => error
+    @backup_run.errors.add(:base, error.message)
   end
 
   def create
     attributes = params.expect(backup_run: [ :file, :save_path ])
     uploaded_file = attributes[:file]
     @save_path = attributes[:save_path]
-    if uploaded_file.blank?
-      @backup_run = @device.backup_runs.new
-      @backup_run.errors.add(:base, "Choose a file to upload")
-      return render :new, status: :unprocessable_entity
-    end
+    return render_new_with_error("Choose a file to upload") if uploaded_file.blank?
 
-    begin
-      # Older clients can omit the new field; an explicitly blank path is invalid.
-      @save_path = BackupDirectory.for_user(current_user).root.to_s unless attributes.key?(:save_path)
-      destination = BackupDirectory.server.test_write!(@save_path)
+    destination = begin
+      BackupDirectory.test_write!(@save_path)
     rescue BackupDirectory::Error => error
-      @backup_run = @device.backup_runs.new
-      @backup_run.errors.add(:base, error.message)
-      return render :new, status: :unprocessable_entity
+      return render_new_with_error(error.message)
     end
 
     @backup_run = @device.backup_runs.create!(status: :pending, storage_root: destination.to_s)
@@ -51,13 +40,7 @@ class BackupRunsController < ApplicationController
       record_security_event("BACKUP_FAILED", current_user, subject: @backup_run,
         details: "#{uploaded_file.original_filename} to #{@device.name}#{' (over the size limit)' if too_large}")
 
-      alert =
-        if too_large
-          "File is larger than the #{helpers.number_to_human_size(storage.max_bytes)} upload limit."
-        else
-          "Backup failed to store the file."
-        end
-
+      alert = too_large ? "File is larger than the #{helpers.number_to_human_size(storage.max_bytes)} upload limit." : "Backup failed to store the file."
       return redirect_to device_backup_runs_path(@device), alert: alert
     end
 
@@ -69,7 +52,9 @@ class BackupRunsController < ApplicationController
 
   private
 
-  def set_device
-    @device = current_user.devices.find(params[:device_id])
+  def render_new_with_error(message)
+    @backup_run = @device.backup_runs.new
+    @backup_run.errors.add(:base, message)
+    render :new, status: :unprocessable_entity
   end
 end

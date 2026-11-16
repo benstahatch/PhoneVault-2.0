@@ -3,13 +3,13 @@
     {
       "warning_type": "File Access",
       "warning_code": 16,
-      "fingerprint": "5a44114390353eb9171c35f6387e756510413aabf769c2ba6d64dace5a47c41d",
+      "fingerprint": "3b1b3ae58b343ada0ff2b24dd600722a8c19d2f238ee607cbf0799eb78903970",
       "check_name": "SendFile",
       "message": "Parameter value used in file name",
       "file": "app/controllers/backup_files_controller.rb",
-      "line": 26,
+      "line": 25,
       "link": "https://brakemanscanner.org/docs/warning_types/file_access/",
-      "code": "send_file(BackupStorage.for_run(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id])).restore(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.active.find(params[:id])).to_s, :filename => ActiveStorage::Filename.new(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.active.find(params[:id]).original_filename).sanitized, :disposition => \"attachment\")",
+      "code": "send_file(BackupStorage.for_run(@device.backup_runs.find(params[:backup_run_id])).restore(@device.backup_runs.find(params[:backup_run_id]).backup_files.active.find(params[:id])).to_s, :filename => ActiveStorage::Filename.new(@device.backup_runs.find(params[:backup_run_id]).backup_files.active.find(params[:id]).original_filename).sanitized, :disposition => \"attachment\")",
       "render_path": null,
       "location": {
         "type": "method",
@@ -26,13 +26,13 @@
     {
       "warning_type": "File Access",
       "warning_code": 16,
-      "fingerprint": "88f7a97ee0fae0c3bfdb40f35c453f750fc80f27c1244b2d07554f2995710da0",
+      "fingerprint": "f6d5c2bacaaa738998ed16d51da96fa2645cacb974b2b90eca358514140f86aa",
       "check_name": "SendFile",
       "message": "Parameter value used in file name",
       "file": "app/controllers/backup_files_controller.rb",
-      "line": 52,
+      "line": 51,
       "link": "https://brakemanscanner.org/docs/warning_types/file_access/",
-      "code": "send_file(BackupStorage.for_run(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id])).path_for(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.active.find(params[:id])).to_s, :type => BackupPreview.new.image_type(current_user.devices.find(params[:device_id]).backup_runs.find(params[:backup_run_id]).backup_files.active.find(params[:id])), :disposition => \"inline\")",
+      "code": "send_file(BackupStorage.for_run(@device.backup_runs.find(params[:backup_run_id])).path_for(@device.backup_runs.find(params[:backup_run_id]).backup_files.active.find(params[:id])).to_s, :type => BackupPreview.new.image_type(@device.backup_runs.find(params[:backup_run_id]).backup_files.active.find(params[:id])), :disposition => \"inline\")",
       "render_path": null,
       "location": {
         "type": "method",

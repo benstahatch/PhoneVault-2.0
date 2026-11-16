@@ -7,7 +7,7 @@ class BackupSavePathTest < ActionDispatch::SystemTestCase
     @temporary = Dir.mktmpdir("phonevault_browser")
     @previous_root = ENV["PHONEVAULT_BACKUP_ROOT"]
     ENV["PHONEVAULT_BACKUP_ROOT"] = @temporary
-    @root = BackupDirectory.for_user(users(:alice)).root
+    @root = BackupDirectory.default_for(users(:alice))
     @external = Dir.mktmpdir("phonevault_downloads_browser")
     @folder = Pathname(@external).realpath.join("Family photos")
     @folder.mkdir

@@ -1,68 +1,34 @@
 require "fileutils"
 require "tempfile"
 
-# Browser paths are server paths. New destinations may be any existing server
-# directory. Restricted roots remain available for legacy relative locations.
-class BackupDirectory
+# Checks save folders on the server. Any existing directory the app can write to
+# may be chosen; paths are resolved to their real location (no symlinks) before saving.
+module BackupDirectory
   class Error < StandardError; end
 
-  attr_reader :root
+  module_function
 
-  def self.server
-    new(root: "/")
-  end
-
-  def self.for_user(user)
-    base = BackupStorage.default_root
-    FileUtils.mkdir_p(base, mode: 0o700)
-    base = base.realpath
-    directory = base
-    [ "users", user.id.to_s ].each do |part|
-      directory = directory.join(part)
-      raise Error, "Storage directories cannot be symbolic links." if directory.symlink?
-      FileUtils.mkdir_p(directory, mode: 0o700)
-      raise Error, "Storage directories cannot be symbolic links." if directory.symlink?
-      raise Error, "Invalid storage directory." unless directory.realpath.parent == directory.parent.realpath
-    end
-    new(root: directory)
+  # the pre-filled save folder for a user's uploads: <backup root>/users/<id>
+  def default_for(user)
+    path = BackupStorage.default_root.join("users", user.id.to_s)
+    FileUtils.mkdir_p(path, mode: 0o700)
+    resolve!(path)
   rescue SystemCallError
     raise Error, "Backup storage is unavailable. Check the server storage configuration and permissions."
   end
 
-  def initialize(root:)
-    @root = Pathname(root).realpath
-  rescue SystemCallError
-    raise Error, "Backup storage is unavailable."
+  # the folder the user picked, or their default folder when they haven't picked one
+  def resolve_or_default!(input, user)
+    input.present? ? resolve!(input) : default_for(user)
   end
 
   def resolve!(input)
     path = Pathname(input.to_s)
-    unless path.absolute? && !path.each_filename.any? { |part| part == ".." }
+    unless path.absolute? && path.each_filename.none?("..")
       raise Error, "Enter an absolute Linux path without parent-directory traversal."
     end
-    path = path.cleanpath
-    # Resolve aliases to their canonical destination before persisting it.
-    if root == Pathname("/")
-      resolved = path.realpath
-      raise Error, "Choose a directory." unless resolved.directory?
-      return resolved
-    end
 
-    unless path == root || path.to_s.start_with?("#{root}/")
-      raise Error, "Choose a folder inside your backup storage."
-    end
-
-    # Reject all symlink components, including links into another account.
-    cursor = root
-    path.relative_path_from(root).each_filename do |part|
-      next if part == "."
-      cursor = cursor.join(part)
-      raise Error, "Symbolic links cannot be used as save folders." if cursor.symlink?
-    end
     resolved = path.realpath
-    unless resolved == root || resolved.to_s.start_with?("#{root}/")
-      raise Error, "Choose a folder inside your backup storage."
-    end
     raise Error, "Choose a directory." unless resolved.directory?
     resolved
   rescue Errno::ENOENT, Errno::ENOTDIR

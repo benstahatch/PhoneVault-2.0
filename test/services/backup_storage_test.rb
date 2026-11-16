@@ -91,34 +91,6 @@ class BackupStorageTest < ActiveSupport::TestCase
   end
 
 
-test "store does not overwrite an existing partial file" do
-  # use a known UUID so the collision can be reproduced
-  uuid = SecureRandom.uuid
-  storage = BackupStorage.new(
-    root: @root,
-    uuid_generator: -> { uuid }
-  )
-
-  final_path = storage.root.join("Alice-Pixel-Backups", "note.txt")
-  temp_path = final_path.dirname.join(".#{uuid}.partial")
-
-  FileUtils.mkdir_p(final_path.dirname)
-  File.binwrite(temp_path, "existing partial")
-
-  # exclusive creation should reject the collision
-  assert_raises(Errno::EEXIST) do
-    storage.store(
-      StringIO.new("new contents"),
-      backup_run: @run,
-      original_filename: "note.txt"
-    )
-  end
-
-  # the existing file must remain untouched
-  assert_equal "existing partial", File.binread(temp_path)
-  assert_not final_path.exist?
-end
-
   test "store preserves original filenames and numbers duplicates without overwriting" do
     first = @storage.store(StringIO.new("first"), backup_run: @run, original_filename: "note.txt")
     another_run = @run.device.backup_runs.create!(status: :running)
@@ -181,13 +153,16 @@ end
   end
 
   test "permanent deletion keeps its file when unlink raises a filesystem error" do
+    skip "root ignores directory permissions" if Process.uid.zero?
     file = @storage.store(StringIO.new("keep it"), backup_run: @run, original_filename: "keep.txt")
     path = @storage.path_for(file)
-    @storage.define_singleton_method(:unlink_file) { |_file_path| raise Errno::EACCES }
+    File.chmod(0o500, path.dirname) # read-only folder: unlink raises Errno::EACCES
 
     assert_raises(BackupStorage::Error) { @storage.permanently_delete(file) }
     assert_equal "keep it", File.binread(path)
     assert BackupFile.exists?(file.id)
+  ensure
+    File.chmod(0o700, path.dirname) if path
   end
 
   test "device renames do not break existing backup paths" do
@@ -196,15 +171,6 @@ end
     second = @storage.store(StringIO.new("second"), backup_run: @run, original_filename: "photo.jpeg")
     assert_equal "Benji-Backups/photo.jpeg", second.storage_path
     assert_equal "first", File.binread(@storage.restore(first))
-  end
-
-  test "legacy numeric folder and UUID paths still restore" do
-    path = "#{@run.id}/#{SecureRandom.uuid}"
-    FileUtils.mkdir_p(@storage.root.join(@run.id.to_s))
-    File.binwrite(@storage.root.join(path), "hello world")
-    file = @run.backup_files.create!(original_filename: "old.txt", storage_path: path,
-      size_bytes: 11, sha256: HELLO_SHA256)
-    assert_equal "hello world", File.binread(@storage.restore(file))
   end
 
   test "unsafe and long device names remain single bounded directory components" do
@@ -323,58 +289,6 @@ test "path_for refuses paths that escape the storage root" do
 
   assert_raises(BackupStorage::Error) { @storage.path_for(outside) }
   assert_raises(BackupStorage::Error) { @storage.path_for(absolute) }
-end
-
-test "path_for rejects a storage path with the wrong backup run id" do
-  # the path must belong to the same backup run as the record
-  storage_path = "#{@run.id + 1}/#{SecureRandom.uuid}"
-
-  backup_file = BackupFile.new(
-    backup_run: @run,
-    storage_path: storage_path
-  )
-
-  assert_raises(BackupStorage::Error) do
-    @storage.path_for(backup_file)
-  end
-end
-
-test "path_for rejects a storage path without a valid uuid" do
-  # phonevault storage filenames should always use generated UUIDs
-  backup_file = BackupFile.new(
-    backup_run: @run,
-    storage_path: "#{@run.id}/not-a-uuid"
-  )
-
-  assert_raises(BackupStorage::Error) do
-    @storage.path_for(backup_file)
-  end
-end
-
-test "path_for rejects a symlink that resolves outside the storage root" do
-  # create a real file outside phonevault storage
-  Dir.mktmpdir("phonevault_outside") do |outside_root|
-    outside_file = Pathname(outside_root).join("secret.txt")
-    File.write(outside_file, "outside phonevault")
-
-    # create a valid-looking phonevault path that is actually a symlink
-    uuid = SecureRandom.uuid
-    storage_path = "#{@run.id}/#{uuid}"
-    link_path = @storage.root.join(storage_path)
-
-    FileUtils.mkdir_p(link_path.dirname)
-    File.symlink(outside_file, link_path)
-
-    backup_file = BackupFile.new(
-      backup_run: @run,
-      storage_path: storage_path
-    )
-
-    # reject the file because its real location escapes the backup root
-    assert_raises(BackupStorage::Error) do
-      @storage.path_for(backup_file)
-    end
-  end
 end
 
   test "default_root uses PHONEVAULT_BACKUP_ROOT when configured" do

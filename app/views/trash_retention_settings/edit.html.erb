@@ -14,20 +14,15 @@
   <%= form_with url: confirm_trash_retention_settings_path, method: :post, data: {turbo: false } do |form| %>
     <div class="mb-6">
       <%= form.label :trash_retention_days, "Keep deleted backups for", class: "mb-2 block font-semibold text-neutral-900" %>
-      <%= form.select :trash_retention_days,
-        options_for_select([
-          [ "Never (keep files until manually deleted)", "" ],
-          [ "30 days (recommended)", "30" ],
-          [ "60 days", "60" ],
-          [ "90 days", "90" ]
-        ], @retention_days&.to_s || ""),
-        {},
+      <% choices = [ [ "Never (keep files until manually deleted)", "" ] ] +
+           User::TRASH_RETENTION_DAYS.map { |days| [ "#{days} days#{" (recommended)" if days == 30}", days ] } %>
+      <%= form.select :trash_retention_days, options_for_select(choices, @retention_days.to_s), {},
         class: "block w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-neutral-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900" %>
     </div>
 
     <div class="flex flex-wrap gap-3">
       <%= form.submit "Continue", class: button_classes %>
-      <%= link_to "Back to Trash", trash_path, class: button_classes(:secondary) %>
+      <%= link_to "Back to Trash", trashed_files_path, class: button_classes(:secondary) %>
     </div>
   <% end %>
 </section>

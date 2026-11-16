@@ -10,8 +10,7 @@
       <% warning = warning_event?(event) %>
       <li class="flex flex-col gap-1 border-b border-neutral-200 p-4 last:border-b-0 sm:flex-row sm:items-baseline sm:gap-4 <%= "border-l-4 border-l-red-600 bg-red-50" if warning %>"
           data-event-type="<%= event.event_type %>">
-        <%= tag.time event.created_at.strftime("%b %d, %Y %H:%M"), datetime: event.created_at.iso8601,
-              class: "shrink-0 text-sm text-neutral-600 sm:w-40" %>
+        <%= timestamp(event.created_at, format: "%b %d, %Y %H:%M", class: "shrink-0 text-sm text-neutral-600 sm:w-40") %>
         <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
           <%# kept on one line so no space appears before the colon %>
           <strong class="<%= warning ? "text-red-800" : "text-neutral-900" %>"><%= event_label(event) %></strong><% if event.details.present? %><span class="text-neutral-700">: <%= event.details %></span><% end %>

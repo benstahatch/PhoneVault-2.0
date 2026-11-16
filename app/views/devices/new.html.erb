@@ -1,17 +1,7 @@
 <h1 class="mb-6 text-3xl sm:text-4xl font-bold text-neutral-900">Register a Device</h1>
 
 <div class="box-border max-w-lg rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
-  <% if @device.errors.any? %>
-    <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-      <h2 class="m-0 mb-2 text-sm font-semibold"><%= pluralize(@device.errors.count, "error") %> prevented this device from being registered:</h2>
-
-      <ul class="m-0 pl-5">
-        <% @device.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
+  <%= render "shared/errors", record: @device, prevented: "this device from being registered" %>
 
   <%= form_with model: @device do |form| %>
     <div class="mb-5">
@@ -25,7 +15,7 @@
     </div>
 
     <div class="flex flex-wrap gap-3">
-      <%= form.submit "Register device", class: "#{button_classes} cursor-pointer" %>
+      <%= form.submit "Register device", class: button_classes %>
       <%= link_to "Back to your devices", devices_path, class: button_classes(:secondary) %>
     </div>
   <% end %>

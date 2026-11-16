@@ -132,26 +132,23 @@ class TrashRetentionJobTest < ActiveJob::TestCase
   end
 
   test "failed filesystem deletion retains the record and logs the error" do
+    skip "root ignores directory permissions" if Process.uid.zero?
     ENV["PHONEVAULT_TRASH_CLEANUP_ENABLED"] = "true"
     @user.update!(trash_retention_days: 30)
     log_output = StringIO.new
     original_logger = Rails.logger
     Rails.logger = ActiveSupport::Logger.new(log_output)
     path = BackupStorage.for_run(@run).path_for(@file)
-    job = TrashRetentionJob.new
-    job.define_singleton_method(:backup_storage_for) do |run|
-      storage = BackupStorage.for_run(run)
-      storage.define_singleton_method(:unlink_file) { |_file_path| raise Errno::EACCES }
-      storage
-    end
+    File.chmod(0o500, path.dirname) # read-only folder: unlink raises Errno::EACCES
 
-    result = job.perform
+    result = TrashRetentionJob.perform_now
 
     assert_equal "failed", result.first[:status]
     assert @file.reload.deleted_at.present?
     assert File.file?(path)
     assert_match "Trash retention failed", log_output.string
   ensure
+    File.chmod(0o700, path.dirname) if path
     Rails.logger = original_logger if original_logger
   end
 

@@ -1,0 +1,13 @@
+<%# A record's validation errors. Optional prevented: "this device from being registered" adds a heading. %>
+<% if record&.errors&.any? %>
+  <div class="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+    <% if local_assigns[:prevented] %>
+      <h2 class="m-0 mb-2 text-sm font-semibold"><%= pluralize(record.errors.count, "error") %> prevented <%= prevented %>:</h2>
+    <% end %>
+    <ul class="m-0 pl-5">
+      <% record.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
