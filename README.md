@@ -1,6 +1,5 @@
 # PhoneVault
 
-
 **Personal file backups, on your own hardware.**
 
 Cloud storage services make it convenient to store and back up personal files, but they also require users to rely on infrastructure managed by third-party providers. PhoneVault offers a self-hosted alternative, allowing users to store, organize, and recover personal files on a Linux server they control.
@@ -34,15 +33,15 @@ PhoneVault version 1 includes the following functionality:
 
 PhoneVault is built using the following technologies:
 
-| Technology | Purpose |
-| --- | --- |
-| **Ruby on Rails 8.1.4** | Provides the application, user interface, and backup functionality. |
-| **Ruby 3.4.10** | Programming language used by Rails. |
-| **MySQL 8.4** | Stores user accounts, registered devices, backup history, and file metadata. |
-| **Docker and Docker Compose** | Run PhoneVault and its database in containers for easier deployment. |
-| **Linux** | Hosts the application and stores uploaded files. |
-| **Solid Queue** | Handles scheduled Trash cleanup when enabled. |
-| **Tailscale (Optional)** | Provides private remote access from other devices. |
+| Technology                    | Purpose                                                                      |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| **Ruby on Rails 8.1.4**       | Provides the application, user interface, and backup functionality.          |
+| **Ruby 3.4.13**               | Programming language used by Rails.                                          |
+| **MySQL 8.4**                 | Stores user accounts, registered devices, backup history, and file metadata. |
+| **Docker and Docker Compose** | Run PhoneVault and its database in containers for easier deployment.         |
+| **Linux**                     | Hosts the application and stores uploaded files.                             |
+| **Solid Queue**               | Handles scheduled Trash cleanup when enabled.                                |
+| **Tailscale (Optional)**      | Provides private remote access from other devices.                           |
 
 ### Development and Testing
 
@@ -50,11 +49,9 @@ PhoneVault uses **Minitest** for automated testing, **RuboCop** for Ruby code ch
 
 These tools help verify the application's functionality and identify potential issues during development.
 
-
 ---
 
 # Quick Start: Run Everything in Docker
-
 
 ### Before You Begin
 
@@ -71,7 +68,6 @@ You do not need to install Ruby, Rails, or MySQL manually. The installer handles
 
 Run the following command in your Linux terminal:
 
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
 ```
@@ -84,7 +80,6 @@ wget --no-verbose --output-document=- https://raw.githubusercontent.com/benstaha
 
 `install.sh` installs only what is missing (Git, curl, Python 3, and Docker through the official get.docker.com script), clones the repository into `~/PhoneVault-2.0`, and runs `launch.py`. It asks for your `sudo` password to install packages. You can read [install.sh](install.sh) before running it.
 
-
 ### Additional Installation Notes
 
 The installer handles Docker permissions during the initial setup, so you can continue without logging out. If you later encounter a Docker permission error, signing out and back in may be necessary to activate your new group membership.
@@ -95,7 +90,6 @@ If you have already cloned PhoneVault, open the project directory and run:
 ./install.sh
 ```
 
-
 If Docker, Git, and Python 3 are already installed, you can skip `install.sh`:
 
 ```bash
@@ -103,7 +97,6 @@ git clone https://github.com/benstahatch/PhoneVault-2.0.git
 cd PhoneVault-2.0
 python3 launch.py
 ```
-
 
 ### Open PhoneVault
 
@@ -142,20 +135,18 @@ PhoneVault account.
 prepares the backup storage, initializes MySQL, and starts PhoneVault
 using Docker.
 
-
-| Command | What it does |
-| --- | --- |
-| `python3 launch.py` | Set up and start PhoneVault |
-| `python3 launch.py status` | Show the containers |
-| `python3 launch.py logs` | Follow the Rails logs |
-| `python3 launch.py down` | Stop PhoneVault; the database and backups are kept |
+| Command                    | What it does                                       |
+| -------------------------- | -------------------------------------------------- |
+| `python3 launch.py`        | Set up and start PhoneVault                        |
+| `python3 launch.py status` | Show the containers                                |
+| `python3 launch.py logs`   | Follow the Rails logs                              |
+| `python3 launch.py down`   | Stop PhoneVault; the database and backups are kept |
 
 Both containers use `restart: unless-stopped`, so PhoneVault comes back after a reboot once Docker starts.
 
 Backups are stored in `storage/backups/` inside the repository unless `PHONEVAULT_BACKUP_ROOT` in `.env` names another folder. The folder must be owned by user id 1000, the user Rails runs as inside the container.
 
 The Rails container only starts with Compose's `app` profile, so the development workflow below (`docker compose up -d` starts just MySQL) is unchanged.
-
 
 ### First Backup Test
 
@@ -238,7 +229,6 @@ This design keeps file storage separate from structured database
 records while allowing users to manage everything through a single
 web interface.
 
-
 ---
 
 ## Database Design
@@ -249,13 +239,13 @@ and security activity.
 
 The database contains five main tables:
 
-| Table | Purpose |
-| --- | --- |
-| `users` | Stores user accounts and retention preferences. |
-| `devices` | Tracks devices registered to each user. |
-| `backup_runs` | Records individual backup attempts and their status. |
-| `backup_files` | Stores filenames, file sizes, SHA-256 digests, and storage paths. |
-| `security_events` | Records authentication and file management activity. |
+| Table             | Purpose                                                           |
+| ----------------- | ----------------------------------------------------------------- |
+| `users`           | Stores user accounts and retention preferences.                   |
+| `devices`         | Tracks devices registered to each user.                           |
+| `backup_runs`     | Records individual backup attempts and their status.              |
+| `backup_files`    | Stores filenames, file sizes, SHA-256 digests, and storage paths. |
+| `security_events` | Records authentication and file management activity.              |
 
 Each user can register multiple devices, each device can
 have multiple backup runs, and each backup run can contain
@@ -414,15 +404,15 @@ Sign in using your regular PhoneVault account.
 If PhoneVault is not working as expected, use the following
 table to identify common problems and possible solutions.
 
-| Problem | What to Check |
-| --- | --- |
-| **Cannot open PhoneVault** | Confirm the server is running and you are using the correct IP address and port `8080`. |
-| **Docker permission denied** | Sign out and back in to activate your Docker group membership. |
-| **PhoneVault fails to start** | Check the container status and application logs using the commands below. |
-| **File upload fails** | Check available disk space and confirm PhoneVault can write to the selected storage location. |
-| **File restore fails** | Confirm the backup file exists and has not been modified or corrupted. |
-| **External drive is unavailable** | Verify that the drive is connected and mounted before uploading files. |
-| **Database connection error** | Check that the MySQL container is running and review the application logs. |
+| Problem                           | What to Check                                                                                 |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Cannot open PhoneVault**        | Confirm the server is running and you are using the correct IP address and port `8080`.       |
+| **Docker permission denied**      | Sign out and back in to activate your Docker group membership.                                |
+| **PhoneVault fails to start**     | Check the container status and application logs using the commands below.                     |
+| **File upload fails**             | Check available disk space and confirm PhoneVault can write to the selected storage location. |
+| **File restore fails**            | Confirm the backup file exists and has not been modified or corrupted.                        |
+| **External drive is unavailable** | Verify that the drive is connected and mounted before uploading files.                        |
+| **Database connection error**     | Check that the MySQL container is running and review the application logs.                    |
 
 ### Check Application Status
 
@@ -453,12 +443,12 @@ during installation. Most users can keep the default settings.
 
 The following options can be customized:
 
-| Setting | Default | Description |
-| --- | --- | --- |
-| `PHONEVAULT_PORT` | `8080` | Port used to access PhoneVault through Docker. |
-| `PHONEVAULT_BACKUP_ROOT` | `storage/backups/` | Directory where uploaded files are stored. |
-| `PHONEVAULT_MAX_UPLOAD_MB` | `10240` (10 GB) | Maximum permitted upload size in megabytes. |
-| `PHONEVAULT_TRASH_CLEANUP_ENABLED` | `false` | Enables scheduled cleanup of expired Trash files when set to `true`. |
+| Setting                            | Default            | Description                                                          |
+| ---------------------------------- | ------------------ | -------------------------------------------------------------------- |
+| `PHONEVAULT_PORT`                  | `8080`             | Port used to access PhoneVault through Docker.                       |
+| `PHONEVAULT_BACKUP_ROOT`           | `storage/backups/` | Directory where uploaded files are stored.                           |
+| `PHONEVAULT_MAX_UPLOAD_MB`         | `10240` (10 GB)    | Maximum permitted upload size in megabytes.                          |
+| `PHONEVAULT_TRASH_CLEANUP_ENABLED` | `false`            | Enables scheduled cleanup of expired Trash files when set to `true`. |
 
 After changing your configuration, restart PhoneVault:
 

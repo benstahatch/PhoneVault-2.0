@@ -21,3 +21,20 @@ module ActionDispatch
     setup { Rails.cache.clear }
   end
 end
+
+
+# Work around Chrome rejecting Capybara's wildcard storage reset.
+# Close the browser so the next test starts with a fresh session.
+require "capybara/selenium/driver_specializations/chrome_driver"
+
+module ChromeStorageResetWorkaround
+  def reset!
+    super
+  rescue Selenium::WebDriver::Error::InvalidArgumentError => error
+    raise unless error.message.include?("* is not a valid URL")
+
+    quit
+  end
+end
+
+Capybara::Selenium::Driver::ChromeDriver.prepend(ChromeStorageResetWorkaround)
