@@ -17,6 +17,8 @@ Built with **Ruby on Rails, MySQL, and Docker**, PhoneVault provides a web inter
    sudo apt update && sudo apt install -y curl
    ```
 
+   > **Debian:** If you set a root password while installing Debian, your account won't have `sudo` yet. Run `su -l -c "apt install -y sudo && usermod -aG sudo $USER"`, enter the root password, then log out and back in.
+
 3. Run the PhoneVault installer. It installs everything else PhoneVault needs (Git, Python 3, and Docker), downloads PhoneVault, and starts it:
 
    ```bash
