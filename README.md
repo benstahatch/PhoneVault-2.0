@@ -8,6 +8,25 @@ Built with **Ruby on Rails, MySQL, and Docker**, PhoneVault provides a web inter
 
 > **Current version:** PhoneVault supports manual, single-file backups through a web browser. Automatic device synchronization and scheduled backups are planned for future development.
 
+## Install in Three Steps
+
+1. Install **Debian** or **Ubuntu** on the computer that will store your backups.
+2. Open a terminal and install curl if you don't already have it:
+
+   ```bash
+   sudo apt update && sudo apt install -y curl
+   ```
+
+   > **Debian:** If you set a root password while installing Debian, your account won't have `sudo` yet. Run `su -l -c "apt install -y sudo && usermod -aG sudo $USER"`, enter the root password, then log out and back in.
+
+3. Run the PhoneVault installer. It installs everything else PhoneVault needs (Git, Python 3, and Docker), downloads PhoneVault, and starts it:
+
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/benstahatch/PhoneVault-2.0/main/install.sh | bash
+   ```
+
+When it finishes, open `http://localhost:8080` in a browser and go to `/signup` to create your account.
+
 **Get started:** [Installation](#quick-start-run-everything-in-docker) | [First Backup](#first-backup-test)
 
 ---
